@@ -5,6 +5,7 @@ import com.jessethouin.strategy.conf.Config;
 import com.jessethouin.strategy.listeners.AlpacaAccountListener;
 import com.jessethouin.strategy.listeners.AlpacaMarketDataListener;
 import com.jessethouin.strategy.subscriptions.OrderDataSubscription;
+import lombok.Getter;
 import net.jacobpeterson.alpaca.rest.AlpacaClientException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -14,6 +15,7 @@ import org.ta4j.core.BaseTradingRecord;
 import org.ta4j.core.num.DecimalNum;
 
 import java.time.ZonedDateTime;
+import java.util.TimerTask;
 
 import static com.jessethouin.strategy.conf.AlpacaApiServices.ALPACA_ACCOUNT_API;
 import static com.jessethouin.strategy.conf.AlpacaApiServices.ALPACA_POSITIONS_API;
@@ -63,4 +65,13 @@ public class AlpacaLiveStrategyRunner {
         AlpacaStrategyRunnerUtil.preloadSeries(barSeries, start, end, config.getFeed(), config.getMaxBars(), config.getCurrencyPair());
         return barSeries.getBarCount();
     }
+
+    @Getter
+    private final TimerTask reconnect = new TimerTask() {
+        public void run() {
+            LOG.info("Reconnecting to order and crypto market streams on purpose.");
+            AlpacaApiServices.restartOrderUpdatesListener(alpacaAccountListener.getStreamingListener());
+            AlpacaApiServices.restartCryptoMarketDataListener(alpacaMarketDataListener.getCryptoMarketDataListener(), config);
+        }
+    };
 }

@@ -8,6 +8,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
 
+import java.util.Timer;
+
 @SpringBootApplication
 public class StrategyApplication {
     public static void main(String[] args) {
@@ -18,7 +20,12 @@ public class StrategyApplication {
             Config config = context.getBean(Config.class);
 
             if (config.isLive()) {
-                context.getBean(AlpacaLiveStrategyRunner.class).run();
+                AlpacaLiveStrategyRunner alpacaLiveStrategyRunner = context.getBean(AlpacaLiveStrategyRunner.class);
+                alpacaLiveStrategyRunner.run();
+
+                Timer timer = new Timer("Reconnect Timer");
+                long period = 1000L * 60L * 60L;
+                timer.scheduleAtFixedRate(alpacaLiveStrategyRunner.getReconnect(), period, period);
             } else {
                 context.getBean(AlpacaTestStrategyRunner.class).run();
             }

@@ -61,6 +61,18 @@ public class AlpacaApiServices {
         ALPACA_CRYPTO_STREAMING_API.subscribe(FeedType.TRADE.equals(config.getFeed()) ? List.of(config.getCurrencyPair()) : null, null, FeedType.BAR.equals(config.getFeed()) ? List.of(config.getCurrencyPair()) : null);
     }
 
+    public static void restartCryptoMarketDataListener(MarketDataListener marketDataListener, Config config) {
+        ALPACA_CRYPTO_STREAMING_API.disconnect();
+        while (ALPACA_CRYPTO_STREAMING_API.isConnected()) {
+            try {
+                Thread.sleep(100L);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        startCryptoMarketDataListener(marketDataListener, config);
+    }
+
     public static void connectToStockStream() {
         ALPACA_STOCK_STREAMING_API.subscribeToControl(
                 MarketDataMessageType.SUCCESS,
@@ -88,5 +100,17 @@ public class AlpacaApiServices {
         AlpacaApiServices.connectToUpdatesStream();
         ALPACA_STREAMING_API.setListener(streamingListener);
         ALPACA_STREAMING_API.streams(StreamingMessageType.TRADE_UPDATES);
+    }
+
+    public static void restartOrderUpdatesListener(StreamingListener streamingListener) {
+        ALPACA_STREAMING_API.disconnect();
+        while (ALPACA_STREAMING_API.isConnected()) {
+            try {
+                Thread.sleep(100L);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        startOrderUpdatesListener(streamingListener);
     }
 }
