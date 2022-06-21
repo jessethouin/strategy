@@ -104,7 +104,7 @@ public class StrategyRunnerUtil {
 
         if (strategy.shouldEnter(index)) {
             LOG.debug("Strategy should ENTER at {} on {}", close, index);
-            boolean entered = tradingRecord.enter(index, close, get95PercentBuyBudget(close, cash));
+            boolean entered = tradingRecord.enter(index, close, get90PercentBuyBudget(close, cash));
             if (entered) {
                 marketOperation = MarketOperation.ENTER;
                 Trade entry = tradingRecord.getLastEntry();
@@ -125,6 +125,11 @@ public class StrategyRunnerUtil {
         }
 
         return marketOperation;
+    }
+
+    @NotNull
+    public static DecimalNum get90PercentBuyBudget(DecimalNum close, DecimalNum cash) {
+        return (DecimalNum) cash.multipliedBy(DecimalNum.valueOf(.90)).dividedBy(close);
     }
 
     @NotNull

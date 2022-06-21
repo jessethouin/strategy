@@ -58,14 +58,14 @@ public class AlpacaApiServices {
     public static void startCryptoMarketDataListener(MarketDataListener marketDataListener, Config config) {
         AlpacaApiServices.connectToCryptoStream();
         ALPACA_CRYPTO_STREAMING_API.setListener(marketDataListener);
-        ALPACA_CRYPTO_STREAMING_API.subscribe(FeedType.TRADE.equals(config.getFeed()) ? List.of(config.getCurrencyPair()) : null, null, FeedType.BAR.equals(config.getFeed()) ? List.of(config.getCurrencyPair()) : null);
+        ALPACA_CRYPTO_STREAMING_API.subscribe(FeedType.TRADE.equals(config.getFeed()) ? List.of(config.getSymbol()) : null, null, FeedType.BAR.equals(config.getFeed()) ? List.of(config.getSymbol()) : null);
     }
 
     public static void restartCryptoMarketDataListener(MarketDataListener marketDataListener, Config config) {
         ALPACA_CRYPTO_STREAMING_API.disconnect();
         while (ALPACA_CRYPTO_STREAMING_API.isConnected()) {
             try {
-                Thread.sleep(100L);
+                Thread.sleep(5000L);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
@@ -84,6 +84,24 @@ public class AlpacaApiServices {
         if (!ALPACA_STOCK_STREAMING_API.isValid()) {
             System.out.println("Websocket not valid!");
         }
+    }
+
+    public static void startStockMarketDataListener(MarketDataListener marketDataListener, Config config) {
+        AlpacaApiServices.connectToStockStream();
+        ALPACA_STOCK_STREAMING_API.setListener(marketDataListener);
+        ALPACA_STOCK_STREAMING_API.subscribe(FeedType.TRADE.equals(config.getFeed()) ? List.of(config.getSymbol()) : null, null, FeedType.BAR.equals(config.getFeed()) ? List.of(config.getSymbol()) : null);
+    }
+
+    public static void restartStockMarketDataListener(MarketDataListener marketDataListener, Config config) {
+        ALPACA_STOCK_STREAMING_API.disconnect();
+        while (ALPACA_STOCK_STREAMING_API.isConnected()) {
+            try {
+                Thread.sleep(5000L);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        startStockMarketDataListener(marketDataListener, config);
     }
 
     public static void connectToUpdatesStream() {
@@ -106,7 +124,7 @@ public class AlpacaApiServices {
         ALPACA_STREAMING_API.disconnect();
         while (ALPACA_STREAMING_API.isConnected()) {
             try {
-                Thread.sleep(100L);
+                Thread.sleep(5000L);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }

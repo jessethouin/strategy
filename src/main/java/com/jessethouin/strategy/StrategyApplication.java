@@ -1,6 +1,7 @@
 package com.jessethouin.strategy;
 
 import com.jessethouin.strategy.charts.BollingerBandsChart;
+import com.jessethouin.strategy.charts.CCIChart;
 import com.jessethouin.strategy.charts.SMAChart;
 import com.jessethouin.strategy.conf.Config;
 import net.jacobpeterson.alpaca.rest.AlpacaClientException;
@@ -24,7 +25,7 @@ public class StrategyApplication {
                 alpacaLiveStrategyRunner.run();
 
                 Timer timer = new Timer("Reconnect Timer");
-                long period = 1000L * 60L * 60L;
+                long period = 1000L * 60L * 30L;
                 timer.scheduleAtFixedRate(alpacaLiveStrategyRunner.getReconnect(), period, period);
             } else {
                 context.getBean(AlpacaTestStrategyRunner.class).run();
@@ -33,8 +34,7 @@ public class StrategyApplication {
             if (config.isChart()) {
                 switch (config.getStrategy()) {
                     case BOLLINGER_BAND -> context.getBean(BollingerBandsChart.class).startChart();
-                    case CCI -> {
-                    }
+                    case CCI -> context.getBean(CCIChart.class).startChart();
                     case DEFAULT -> {
                     }
                     case MOVING_MOMENTUM -> {

@@ -54,7 +54,7 @@ public class AlpacaTestStrategyRunner {
             end = ZonedDateTime.now();
         }
 
-        AlpacaStrategyRunnerUtil.preloadSeries(series, start, end, config.getFeed(), config.getMaxBars(), config.getCurrencyPair());
+        AlpacaStrategyRunnerUtil.preloadSeries(series, start, end, config);
         return series.getBarCount();
     }
 }

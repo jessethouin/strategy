@@ -1,20 +1,18 @@
 package com.jessethouin.strategy.listeners;
 
-import com.jessethouin.strategy.AlpacaStrategyRunnerUtil;
 import com.jessethouin.strategy.StrategyRunnerUtil;
 import com.jessethouin.strategy.beans.ChartData;
-import com.jessethouin.strategy.conf.Config;
-import com.jessethouin.strategy.conf.MarketOperation;
+import com.jessethouin.strategy.beans.MarketData;
 import net.jacobpeterson.alpaca.model.endpoint.marketdata.crypto.common.enums.Exchange;
 import net.jacobpeterson.alpaca.model.endpoint.marketdata.crypto.realtime.bar.CryptoBarMessage;
 import net.jacobpeterson.alpaca.model.endpoint.marketdata.crypto.realtime.trade.CryptoTradeMessage;
+import net.jacobpeterson.alpaca.model.endpoint.marketdata.stock.realtime.bar.StockBarMessage;
+import net.jacobpeterson.alpaca.model.endpoint.marketdata.stock.realtime.trade.StockTradeMessage;
 import net.jacobpeterson.alpaca.websocket.marketdata.MarketDataListener;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Component;
 import org.ta4j.core.BarSeries;
-import org.ta4j.core.BaseTradingRecord;
-import org.ta4j.core.Strategy;
 import org.ta4j.core.num.DecimalNum;
 import reactor.core.publisher.Sinks;
 
@@ -25,19 +23,14 @@ import java.time.format.DateTimeFormatter;
 public class AlpacaMarketDataListener {
     private static final Logger LOG = LogManager.getLogger();
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss,SSS Z");
-    private final Config config;
     private final BarSeries barSeries;
-    private final Strategy strategy;
-    private final BaseTradingRecord tradingRecord;
+    final Sinks.Many<ChartData> alpacaChartDataSink;
+    final Sinks.Many<MarketData> alpacaMarketDataSink;
 
-    final Sinks.Many<ChartData> alpacaChartSink;
-
-    public AlpacaMarketDataListener(Config config, BarSeries barSeries, Strategy strategy, BaseTradingRecord tradingRecord, Sinks.Many<ChartData> alpacaChartSink) {
-        this.config = config;
+    public AlpacaMarketDataListener(BarSeries barSeries, Sinks.Many<ChartData> alpacaChartDataSink, Sinks.Many<MarketData> alpacaMarketDataSink) {
         this.barSeries = barSeries;
-        this.strategy = strategy;
-        this.tradingRecord = tradingRecord;
-        this.alpacaChartSink = alpacaChartSink;
+        this.alpacaChartDataSink = alpacaChartDataSink;
+        this.alpacaMarketDataSink = alpacaMarketDataSink;
     }
 
     public MarketDataListener getCryptoMarketDataListener() {
@@ -48,7 +41,6 @@ public class AlpacaMarketDataListener {
             DecimalNum low;
             DecimalNum volume;
             DecimalNum close;
-            boolean newBar;
 
             switch (messageType) {
                 case BAR -> {
@@ -65,7 +57,7 @@ public class AlpacaMarketDataListener {
                     volume = DecimalNum.valueOf(cryptoBar.getVolume());
                     LOG.info("{} ===> {} [{}]: {}", exchange.value(), messageType, DATE_TIME_FORMATTER.format(timestamp), close);
                     barSeries.addBar(timestamp, open, high, low, close, volume);
-                    newBar = true;
+                    alpacaMarketDataSink.tryEmitNext(new MarketData(close));
                 }
                 case TRADE -> {
                     CryptoTradeMessage cryptoTrade = (CryptoTradeMessage) message;
@@ -76,26 +68,18 @@ public class AlpacaMarketDataListener {
                     close = DecimalNum.valueOf(cryptoTrade.getPrice());
                     LOG.debug("{} ===> {} [{}]: {}", exchange.value(), messageType, DATE_TIME_FORMATTER.format(cryptoTrade.getTimestamp()), close);
 
-                    newBar = StrategyRunnerUtil.addTradeToBar(barSeries, cryptoTrade.getTimestamp(), cryptoTrade.getSize(), cryptoTrade.getPrice());
+                    if (StrategyRunnerUtil.addTradeToBar(barSeries, cryptoTrade.getTimestamp(), cryptoTrade.getSize(), cryptoTrade.getPrice())) {
+                        alpacaChartDataSink.tryEmitNext(new ChartData(close));
+                    }
+                    alpacaMarketDataSink.tryEmitNext(new MarketData(close));
                 }
-                case SUBSCRIPTION, SUCCESS, ERROR -> {
-                    LOG.info("===> " + messageType + " [" + message.toString() + "]");
-                    return;
-                }
-                default -> throw new IllegalArgumentException("Unknown messageType in AlpacaCryptoMarketSubscription.subscribe()");
-            }
-
-            MarketOperation marketOperation = StrategyRunnerUtil.exerciseStrategy(barSeries, strategy, tradingRecord, close, config.getCash());
-            AlpacaStrategyRunnerUtil.exerciseAlpacaStrategy(marketOperation, close, config.getCash(), config.getCurrencyPair());
-
-            if (newBar) {
-                alpacaChartSink.tryEmitNext(new ChartData(close));
+                case SUBSCRIPTION, SUCCESS, ERROR -> LOG.info("===> " + messageType + " [" + message.toString() + "]");
+                default -> throw new IllegalArgumentException("Unknown messageType in AlpacaMarketDataListener.getCryptoMarketDataListener()");
             }
         };
     }
 
-/*
-    public static MarketDataListener getStockMarketDataListener(BarSeries series, Strategy strategy, TradingRecord tradingRecord) {
+    public MarketDataListener getStockMarketDataListener() {
         return (messageType, message) -> {
             ZonedDateTime timestamp;
             DecimalNum open;
@@ -103,6 +87,7 @@ public class AlpacaMarketDataListener {
             DecimalNum low;
             DecimalNum volume;
             DecimalNum close;
+
             switch (messageType) {
                 case BAR -> {
                     StockBarMessage stockBar = (StockBarMessage) message;
@@ -113,29 +98,23 @@ public class AlpacaMarketDataListener {
                     close = DecimalNum.valueOf(stockBar.getClose());
                     volume = DecimalNum.valueOf(stockBar.getVolume());
                     LOG.info("===> {} [{}]: {}", messageType, DATE_TIME_FORMATTER.format(timestamp), close);
-                    series.addBar(timestamp, open, high, low, close, volume);
+                    barSeries.addBar(timestamp, open, high, low, close, volume);
+                    alpacaMarketDataSink.tryEmitNext(new MarketData(close));
                 }
                 case TRADE -> {
                     StockTradeMessage stockTrade = (StockTradeMessage) message;
                     close = DecimalNum.valueOf(stockTrade.getPrice());
                     LOG.debug("===> {} [{}]: {}", messageType, DATE_TIME_FORMATTER.format(stockTrade.getTimestamp()), close);
 
-                    StrategyRunnerUtil.addTradeToBar(series, stockTrade.getTimestamp(), stockTrade.getSize().doubleValue(), stockTrade.getPrice());
+                    if (StrategyRunnerUtil.addTradeToBar(barSeries, stockTrade.getTimestamp(), stockTrade.getSize().doubleValue(), stockTrade.getPrice())) {
+                        alpacaChartDataSink.tryEmitNext(new ChartData(close));
+                    }
+                    alpacaMarketDataSink.tryEmitNext(new MarketData(close));
                 }
-                case SUBSCRIPTION, SUCCESS, ERROR -> {
-                    LOG.info("===> " + messageType + " [" + message.toString() + "]");
-                    return;
-                }
-                default -> throw new IllegalArgumentException("Unknown messageType in AlpacaCryptoMarketSubscription.subscribe()");
+                case SUBSCRIPTION, SUCCESS, ERROR -> LOG.info("===> " + messageType + " [" + message.toString() + "]");
+                default -> throw new IllegalArgumentException("Unknown messageType in AlpacaMarketDataListener.getStockMarketDataListener()");
             }
 
-            double cash = Config.get().getCash();
-            MarketOperation marketOperation = StrategyRunnerUtil.exerciseStrategy(series, strategy, tradingRecord, close, series.getEndIndex(), cash);
-            switch (marketOperation) {
-                case ENTER -> ALPACA_LIVE_STRATEGY_RUNNER.alpacaBuy("AAPL", StrategyRunnerUtil.getBuyBudget(close, cash).getDelegate());
-                case EXIT -> ALPACA_LIVE_STRATEGY_RUNNER.alpacaSell("AAPL");
-            }
         };
     }
-*/
 }

@@ -4,6 +4,8 @@ import com.jessethouin.strategy.conf.AlpacaApiServices;
 import com.jessethouin.strategy.conf.Config;
 import com.jessethouin.strategy.listeners.AlpacaAccountListener;
 import com.jessethouin.strategy.listeners.AlpacaMarketDataListener;
+import com.jessethouin.strategy.subscriptions.MarketDataSubscription;
+import com.jessethouin.strategy.subscriptions.MarketOperationSubscription;
 import com.jessethouin.strategy.subscriptions.OrderDataSubscription;
 import lombok.Getter;
 import net.jacobpeterson.alpaca.rest.AlpacaClientException;
@@ -29,14 +31,18 @@ public class AlpacaLiveStrategyRunner {
     public final AlpacaMarketDataListener alpacaMarketDataListener;
     public final AlpacaAccountListener alpacaAccountListener;
     public final OrderDataSubscription orderDataSubscription;
+    public final MarketDataSubscription marketDataSubscription;
+    public final MarketOperationSubscription marketOperationSubscription;
 
-    public AlpacaLiveStrategyRunner(Config config, BarSeries barSeries, BaseTradingRecord tradingRecord, AlpacaMarketDataListener alpacaMarketDataListener, AlpacaAccountListener alpacaAccountListener, OrderDataSubscription orderDataSubscription) {
+    public AlpacaLiveStrategyRunner(Config config, BarSeries barSeries, BaseTradingRecord tradingRecord, AlpacaMarketDataListener alpacaMarketDataListener, AlpacaAccountListener alpacaAccountListener, OrderDataSubscription orderDataSubscription, MarketDataSubscription marketDataSubscription, MarketOperationSubscription marketOperationSubscription) {
         this.config = config;
         this.barSeries = barSeries;
         this.tradingRecord = tradingRecord;
         this.alpacaMarketDataListener = alpacaMarketDataListener;
         this.alpacaAccountListener = alpacaAccountListener;
         this.orderDataSubscription = orderDataSubscription;
+        this.marketDataSubscription = marketDataSubscription;
+        this.marketOperationSubscription = marketOperationSubscription;
     }
 
     public void run() throws AlpacaClientException {
@@ -47,22 +53,33 @@ public class AlpacaLiveStrategyRunner {
         config.setCash(DecimalNum.valueOf(ALPACA_ACCOUNT_API.get().getCash()));
         LOG.info("Starting cash: {}", config.getCash());
 
-        ALPACA_POSITIONS_API.get().stream().filter(position -> position.getSymbol().equals(config.getCurrencyPair())).forEach(position -> {
+        ALPACA_POSITIONS_API.get().stream().filter(position -> position.getSymbol().equals(config.getSymbol())).forEach(position -> {
             DecimalNum qty = DecimalNum.valueOf(position.getQuantity());
             DecimalNum price = DecimalNum.valueOf(position.getAverageEntryPrice());
             tradingRecord.enter(barSeries.getEndIndex(), price, qty);
         });
 
         orderDataSubscription.subscribe();
+        marketDataSubscription.subscribe();
+        marketOperationSubscription.subscribe();
+
         AlpacaApiServices.startOrderUpdatesListener(alpacaAccountListener.getStreamingListener());
-        AlpacaApiServices.startCryptoMarketDataListener(alpacaMarketDataListener.getCryptoMarketDataListener(), config);
+        switch (config.getMarketType()) {
+            case CRYPTO -> AlpacaApiServices.startCryptoMarketDataListener(alpacaMarketDataListener.getCryptoMarketDataListener(), config);
+            case STOCK -> AlpacaApiServices.startStockMarketDataListener(alpacaMarketDataListener.getStockMarketDataListener(), config);
+        }
+
     }
 
     private int preloadLiveSeries() throws AlpacaClientException {
         ZonedDateTime start = ZonedDateTime.now().minusMinutes(60);
         ZonedDateTime end = ZonedDateTime.now();
 
-        AlpacaStrategyRunnerUtil.preloadSeries(barSeries, start, end, config.getFeed(), config.getMaxBars(), config.getCurrencyPair());
+        switch (config.getMarketType()) {
+            case CRYPTO -> AlpacaStrategyRunnerUtil.preloadSeries(barSeries, start, end, config);
+            // using start.minusMinutes(15) and end.minusMinutes(15) in order to circumvent the subscription requirements. TODO: In production, remove this limitation.
+            case STOCK -> AlpacaStrategyRunnerUtil.preloadSeries(barSeries, start.minusMinutes(15), end.minusMinutes(15), config);
+        }
         return barSeries.getBarCount();
     }
 
@@ -71,7 +88,10 @@ public class AlpacaLiveStrategyRunner {
         public void run() {
             LOG.info("Reconnecting to order and crypto market streams on purpose.");
             AlpacaApiServices.restartOrderUpdatesListener(alpacaAccountListener.getStreamingListener());
-            AlpacaApiServices.restartCryptoMarketDataListener(alpacaMarketDataListener.getCryptoMarketDataListener(), config);
+            switch (config.getMarketType()) {
+                case CRYPTO -> AlpacaApiServices.restartCryptoMarketDataListener(alpacaMarketDataListener.getCryptoMarketDataListener(), config);
+                case STOCK -> AlpacaApiServices.restartStockMarketDataListener(alpacaMarketDataListener.getStockMarketDataListener(), config);
+            }
         }
     };
 }

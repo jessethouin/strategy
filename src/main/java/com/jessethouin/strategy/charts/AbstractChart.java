@@ -9,26 +9,30 @@ import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.ui.ApplicationFrame;
 import org.jfree.chart.ui.UIUtils;
 import org.jfree.data.time.DynamicTimeSeriesCollection;
+import org.jfree.data.time.Second;
 import org.springframework.stereotype.Component;
-import org.ta4j.core.BarSeries;
-import org.ta4j.core.BaseTradingRecord;
-import org.ta4j.core.Strategy;
+import org.ta4j.core.*;
 import reactor.core.publisher.Flux;
 
 import java.awt.*;
 import java.awt.geom.Ellipse2D;
+import java.awt.geom.Rectangle2D;
+import java.util.Date;
+import java.util.List;
 
 @Component
 public abstract class AbstractChart extends ApplicationFrame {
     protected DynamicTimeSeriesCollection dynamicTimeSeriesCollection;
-    protected final Flux<ChartData> alpacaChartFlux;
+    protected final Flux<ChartData> alpacaChartDataSink;
     protected final BarSeries series;
     protected final Strategy strategy;
     protected final BaseTradingRecord tradingRecord;
+    protected int seriesCount;
+    protected boolean lastSeriesIsClose;
 
-    public AbstractChart(Flux<ChartData> alpacaChartFlux, BarSeries series, Strategy strategy, BaseTradingRecord tradingRecord) {
+    public AbstractChart(Flux<ChartData> alpacaChartDataSink, BarSeries series, Strategy strategy, BaseTradingRecord tradingRecord) {
         super("Strategery");
-        this.alpacaChartFlux = alpacaChartFlux;
+        this.alpacaChartDataSink = alpacaChartDataSink;
         this.strategy = strategy;
         this.series = series;
         this.tradingRecord = tradingRecord;
@@ -48,30 +52,63 @@ public abstract class AbstractChart extends ApplicationFrame {
         this.pack();
         UIUtils.centerFrameOnScreen(this);
         this.setVisible(true);
-        alpacaChartFlux.subscribe(chartData -> addChartData(chartData.getClose().floatValue()));
+        alpacaChartDataSink.subscribe(chartData -> addChartData(chartData.getClose().floatValue()));
     }
 
-    protected abstract void addChartData(float floatValue);
+    protected void addChartData(float close) {
+        float[] indicatorData = getIndicatorData(series.getEndIndex());
+        float[] allIndicatorData = new float[seriesCount];
+        for (int j = 0; j < seriesCount; j++) {
+            if (j == seriesCount - 1 && lastSeriesIsClose) {
+                allIndicatorData[j] = close;
+            } else {
+                allIndicatorData[j] = indicatorData[j];
+            }
+        }
+        dynamicTimeSeriesCollection.advanceTime();
+        dynamicTimeSeriesCollection.appendData(allIndicatorData);
+    }
 
-    protected abstract void createDatasets();
+    protected void createDatasets() {
+        List<Bar> barData = series.getBarData();
+        int barCount = barData.size();
+        float[][] seriesData = new float[seriesCount][barCount];
+
+        for (int i = 0; i < barCount; i++) {
+            float[] indicatorData = getIndicatorData(i);
+            for (int j = 0; j < seriesCount; j++) {
+                if (j == seriesCount - 1 && lastSeriesIsClose) {
+                    seriesData[j][i] = barData.get(i).getClosePrice().floatValue();
+                } else {
+                    seriesData[j][i] = indicatorData[j];
+                }
+            }
+        }
+
+        dynamicTimeSeriesCollection = new DynamicTimeSeriesCollection(seriesCount, barCount, new Second());
+        dynamicTimeSeriesCollection.setTimeBase(new Second(new Date()));
+        for (int j = 0; j < seriesCount; j++) {
+            dynamicTimeSeriesCollection.addSeries(seriesData[j], j, "Series " + (j + 1));
+        }
+    }
 
     protected abstract float[] getIndicatorData(int index);
 
     protected JFreeChart createChart() {
         PlotRenderer plotRenderer = getPlotRenderer();
-        final JFreeChart smaChart = ChartFactory.createTimeSeriesChart("SMA", "hh:mm:ss", "indicators", dynamicTimeSeriesCollection, true, true, false);
-        final XYPlot plot = smaChart.getXYPlot();
+        final JFreeChart timeSeriesChart = ChartFactory.createTimeSeriesChart(this.getClass().getSimpleName(), "hh:mm:ss", "indicators", dynamicTimeSeriesCollection, true, true, false);
+        final XYPlot plot = timeSeriesChart.getXYPlot();
         ValueAxis domain = plot.getDomainAxis();
         domain.setAutoRange(true);
         ValueAxis range = plot.getRangeAxis();
         range.setAutoRange(true);
 
-        Shape shape = new Ellipse2D.Double(-4.0, -4.0, 8.0, 8.0);
+        Shape ellipse = new Ellipse2D.Double(-5.0, -5.0, 10.0, 10.0);
 
         int closeSeriesId = dynamicTimeSeriesCollection.getSeriesCount() - 1;
-        plotRenderer.setSeriesShape(closeSeriesId, shape);
+        plotRenderer.setSeriesShape(closeSeriesId, ellipse);
         plotRenderer.setSeriesShapesFilled(closeSeriesId, true);
-        plotRenderer.setSeriesFillPaint(closeSeriesId, Color.black);
+        plotRenderer.setSeriesFillPaint(closeSeriesId, Color.blue);
         plotRenderer.setUseFillPaint(true);
 
         plot.setDataset(0, dynamicTimeSeriesCollection);
@@ -83,14 +120,46 @@ public abstract class AbstractChart extends ApplicationFrame {
         plot.mapDatasetToDomainAxis(0, 0);
         plot.mapDatasetToRangeAxis(0, 0);
 
-        return smaChart;
+        return timeSeriesChart;
     }
 
     protected PlotRenderer getPlotRenderer() {
         return new PlotRenderer(true, true) {
             @Override
             public boolean getItemShapeVisible(int chartSeries, int item) {
-                return false;
+                if (chartSeries != (seriesCount - 1)) return false;
+                int itemCount = dynamicTimeSeriesCollection.getItemCount(seriesCount - 1);
+                return isEnterOrExitPosition(tradingRecord, item, itemCount, series.getEndIndex());
+            }
+
+            @Override
+            public Shape getItemShape(int row, int column) {
+                Shape ellipse = new Ellipse2D.Double(-5.0, -5.0, 10.0, 10.0);
+                Shape square = new Rectangle2D.Double(-5.0, -5.0, 10.0, 10.0);
+
+                List<Position> positions = tradingRecord.getPositions();
+                int itemCount = dynamicTimeSeriesCollection.getItemCount(seriesCount - 1);
+
+                for (Position position : positions) {
+                    int enterIndex = position.getEntry().getIndex();
+                    int positionIndexOnChart = itemCount - (series.getEndIndex() - enterIndex);
+                    if (column == positionIndexOnChart) return ellipse;
+                }
+
+                for (Position position : positions) {
+                    int exitIndex = position.getExit().getIndex();
+                    int positionIndexOnChart = itemCount - (series.getEndIndex() - exitIndex);
+                    if (column == positionIndexOnChart) return square;
+                }
+
+                Position currentPosition = tradingRecord.getCurrentPosition();
+                if (currentPosition.isOpened()) {
+                    int enterIndex = currentPosition.getEntry().getIndex();
+                    int positionIndexOnChart = itemCount - (series.getEndIndex() - enterIndex);
+                    if (column == positionIndexOnChart) return ellipse;
+                }
+
+                return super.getItemShape(row, column);
             }
         };
     }
