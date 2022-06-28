@@ -17,7 +17,8 @@ public class StrategyApplication {
         SpringApplicationBuilder builder = new SpringApplicationBuilder(StrategyApplication.class);
         builder.headless(false);
 
-        try (ConfigurableApplicationContext context = builder.run(args)) {
+        ConfigurableApplicationContext context = builder.run(args);
+        try {
             Config config = context.getBean(Config.class);
 
             if (config.isLive()) {

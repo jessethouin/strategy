@@ -1,7 +1,6 @@
 package com.jessethouin.strategy.strategies;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import com.jessethouin.strategy.beans.BollingerBandsChartData;
 import org.ta4j.core.BarSeries;
 import org.ta4j.core.BaseStrategy;
 import org.ta4j.core.Rule;
@@ -13,14 +12,14 @@ import org.ta4j.core.indicators.bollinger.BollingerBandsMiddleIndicator;
 import org.ta4j.core.indicators.bollinger.BollingerBandsUpperIndicator;
 import org.ta4j.core.indicators.helpers.ClosePriceIndicator;
 import org.ta4j.core.indicators.statistics.StandardDeviationIndicator;
+import org.ta4j.core.num.DecimalNum;
+import org.ta4j.core.num.Num;
 import org.ta4j.core.rules.CrossedDownIndicatorRule;
 import org.ta4j.core.rules.CrossedUpIndicatorRule;
 
 import java.util.Collections;
 
 public class BollingerBandStrategy extends AbstractStrategy {
-    private static final Logger LOG = LogManager.getLogger(BollingerBandStrategy.class);
-
     public static Strategy buildStrategy(BarSeries series) {
         if (series == null) {
             throw new IllegalArgumentException("Series cannot be null");
@@ -41,5 +40,23 @@ public class BollingerBandStrategy extends AbstractStrategy {
         Rule entryRule = new CrossedDownIndicatorRule(closePrice, lowerIndicator);
         Rule exitRule = new CrossedUpIndicatorRule(closePrice, upperIndicator);
         return new BaseStrategy(entryRule, exitRule, 300);
+    }
+
+    public static BollingerBandsChartData getBollingerBandsChartData(int index, Strategy strategy) {
+        CrossedUpIndicatorRule exitRule = (CrossedUpIndicatorRule) strategy.getExitRule();
+        BollingerBandsUpperIndicator upperIndicator = (BollingerBandsUpperIndicator) exitRule.getUp();
+        Num upperIndicatorValue = upperIndicator.getValue(index);
+
+        CrossedDownIndicatorRule entryRule = (CrossedDownIndicatorRule) strategy.getEntryRule();
+        BollingerBandsLowerIndicator lowerIndicator = (BollingerBandsLowerIndicator) entryRule.getLow();
+        Num lowerIndicatorValue = lowerIndicator.getValue(index);
+
+        Num middleIndicatorValue = upperIndicatorValue.plus(lowerIndicatorValue).dividedBy(DecimalNum.valueOf(2));
+
+        return BollingerBandsChartData.builder()
+                .upperIndicatorValue(upperIndicatorValue.floatValue())
+                .middleIndicatorValue(middleIndicatorValue.floatValue())
+                .lowerIndicatorValue(lowerIndicatorValue.floatValue())
+                .build();
     }
 }

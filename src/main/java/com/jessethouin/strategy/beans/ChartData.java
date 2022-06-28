@@ -1,17 +1,18 @@
 package com.jessethouin.strategy.beans;
 
-import lombok.Builder;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.ta4j.core.num.DecimalNum;
 
 @Getter
 @Setter
-@Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class ChartData {
-    public ChartData(DecimalNum close) {
-        this.close = close;
-    }
-
-    private DecimalNum close;
+    private float open;
+    private float close;
+    private float high;
+    private float low;
+    private float volume;
 }

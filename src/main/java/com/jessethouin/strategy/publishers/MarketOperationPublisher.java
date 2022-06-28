@@ -1,4 +1,4 @@
-package com.jessethouin.strategy.subscriptions;
+package com.jessethouin.strategy.publishers;
 
 import com.jessethouin.strategy.StrategyRunnerUtil;
 import com.jessethouin.strategy.beans.MarketData;
@@ -12,7 +12,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
 
 @Component
-public class MarketDataSubscription {
+public class MarketOperationPublisher {
     private final Config config;
     private final BarSeries barSeries;
     private final Strategy strategy;
@@ -20,7 +20,7 @@ public class MarketDataSubscription {
     private final Flux<MarketData> alpacaMarketDataFlux;
     private final Sinks.Many<MarketOperation> alpacaMarketOperationSink;
 
-    public MarketDataSubscription(Config config, BarSeries barSeries, Strategy strategy, BaseTradingRecord tradingRecord, Flux<MarketData> alpacaMarketDataFlux, Sinks.Many<MarketOperation> alpacaMarketOperationSink) {
+    public MarketOperationPublisher(Config config, BarSeries barSeries, Strategy strategy, BaseTradingRecord tradingRecord, Flux<MarketData> alpacaMarketDataFlux, Sinks.Many<MarketOperation> alpacaMarketOperationSink) {
         this.config = config;
         this.barSeries = barSeries;
         this.strategy = strategy;

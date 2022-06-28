@@ -4,7 +4,8 @@ import com.jessethouin.strategy.conf.AlpacaApiServices;
 import com.jessethouin.strategy.conf.Config;
 import com.jessethouin.strategy.listeners.AlpacaAccountListener;
 import com.jessethouin.strategy.listeners.AlpacaMarketDataListener;
-import com.jessethouin.strategy.subscriptions.MarketDataSubscription;
+import com.jessethouin.strategy.publishers.ChartDataPublisher;
+import com.jessethouin.strategy.publishers.MarketOperationPublisher;
 import com.jessethouin.strategy.subscriptions.MarketOperationSubscription;
 import com.jessethouin.strategy.subscriptions.OrderDataSubscription;
 import lombok.Getter;
@@ -30,18 +31,20 @@ public class AlpacaLiveStrategyRunner {
     public final BaseTradingRecord tradingRecord;
     public final AlpacaMarketDataListener alpacaMarketDataListener;
     public final AlpacaAccountListener alpacaAccountListener;
+    public final ChartDataPublisher chartDataPublisher;
     public final OrderDataSubscription orderDataSubscription;
-    public final MarketDataSubscription marketDataSubscription;
+    public final MarketOperationPublisher marketOperationPublisher;
     public final MarketOperationSubscription marketOperationSubscription;
 
-    public AlpacaLiveStrategyRunner(Config config, BarSeries barSeries, BaseTradingRecord tradingRecord, AlpacaMarketDataListener alpacaMarketDataListener, AlpacaAccountListener alpacaAccountListener, OrderDataSubscription orderDataSubscription, MarketDataSubscription marketDataSubscription, MarketOperationSubscription marketOperationSubscription) {
+    public AlpacaLiveStrategyRunner(Config config, BarSeries barSeries, BaseTradingRecord tradingRecord, AlpacaMarketDataListener alpacaMarketDataListener, AlpacaAccountListener alpacaAccountListener, ChartDataPublisher chartDataPublisher, OrderDataSubscription orderDataSubscription, MarketOperationPublisher marketOperationPublisher, MarketOperationSubscription marketOperationSubscription) {
         this.config = config;
         this.barSeries = barSeries;
         this.tradingRecord = tradingRecord;
         this.alpacaMarketDataListener = alpacaMarketDataListener;
         this.alpacaAccountListener = alpacaAccountListener;
+        this.chartDataPublisher = chartDataPublisher;
         this.orderDataSubscription = orderDataSubscription;
-        this.marketDataSubscription = marketDataSubscription;
+        this.marketOperationPublisher = marketOperationPublisher;
         this.marketOperationSubscription = marketOperationSubscription;
     }
 
@@ -59,8 +62,9 @@ public class AlpacaLiveStrategyRunner {
             tradingRecord.enter(barSeries.getEndIndex(), price, qty);
         });
 
+        chartDataPublisher.subscribe();
         orderDataSubscription.subscribe();
-        marketDataSubscription.subscribe();
+        marketOperationPublisher.subscribe();
         marketOperationSubscription.subscribe();
 
         AlpacaApiServices.startOrderUpdatesListener(alpacaAccountListener.getStreamingListener());
@@ -68,7 +72,6 @@ public class AlpacaLiveStrategyRunner {
             case CRYPTO -> AlpacaApiServices.startCryptoMarketDataListener(alpacaMarketDataListener.getCryptoMarketDataListener(), config);
             case STOCK -> AlpacaApiServices.startStockMarketDataListener(alpacaMarketDataListener.getStockMarketDataListener(), config);
         }
-
     }
 
     private int preloadLiveSeries() throws AlpacaClientException {

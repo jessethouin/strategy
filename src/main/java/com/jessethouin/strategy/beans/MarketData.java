@@ -10,9 +10,11 @@ import org.ta4j.core.num.DecimalNum;
 @Setter
 @Builder
 public class MarketData {
-    public MarketData(DecimalNum close) {
+    private boolean newBar;
+    private DecimalNum close;
+
+    public MarketData(boolean newBar, DecimalNum close) {
+        this.newBar = newBar;
         this.close = close;
     }
-
-    private DecimalNum close;
 }

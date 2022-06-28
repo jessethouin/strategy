@@ -1,14 +1,19 @@
 package com.jessethouin.strategy.strategies;
 
+import com.jessethouin.strategy.beans.CCIChartData;
 import org.ta4j.core.BarSeries;
 import org.ta4j.core.BaseStrategy;
 import org.ta4j.core.Rule;
 import org.ta4j.core.Strategy;
 import org.ta4j.core.indicators.CCIIndicator;
+import org.ta4j.core.indicators.helpers.ConstantIndicator;
+import org.ta4j.core.num.DecimalNum;
 import org.ta4j.core.num.Num;
+import org.ta4j.core.rules.AndRule;
 import org.ta4j.core.rules.OverIndicatorRule;
 import org.ta4j.core.rules.UnderIndicatorRule;
 
+import java.lang.reflect.Field;
 import java.util.Collections;
 
 public class CCIStrategy extends AbstractStrategy {
@@ -33,5 +38,49 @@ public class CCIStrategy extends AbstractStrategy {
         Strategy strategy = new BaseStrategy(entryRule, exitRule);
         strategy.setUnstablePeriod(5);
         return strategy;
+    }
+
+    public static CCIChartData getCCIChartData(int index, Strategy strategy) {
+        AndRule entryRule = (AndRule) strategy.getEntryRule();
+        OverIndicatorRule overIndicatorRule = (OverIndicatorRule) entryRule.getRule1();
+        Num longCCIIndicatorValue;
+        Num plus100IndicatorValue;
+        try {
+            Field longCCIIndicatorField = overIndicatorRule.getClass().getDeclaredField("first");
+            longCCIIndicatorField.setAccessible(true);
+            CCIIndicator longCCIIndicator = (CCIIndicator) longCCIIndicatorField.get(overIndicatorRule);
+            longCCIIndicatorValue = longCCIIndicator.getValue(index);
+
+            Field plus100IndicatorField = overIndicatorRule.getClass().getDeclaredField("second");
+            plus100IndicatorField.setAccessible(true);
+            ConstantIndicator<DecimalNum> plus100Indicator = (ConstantIndicator<DecimalNum>) plus100IndicatorField.get(overIndicatorRule);
+            plus100IndicatorValue = plus100Indicator.getValue(index);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        UnderIndicatorRule underIndicatorRule = (UnderIndicatorRule) entryRule.getRule2();
+        Num shortCCIIndicatorValue;
+        Num minus100IndicatorValue;
+        try {
+            Field shortCCIIndicatorField = underIndicatorRule.getClass().getDeclaredField("first");
+            shortCCIIndicatorField.setAccessible(true);
+            CCIIndicator shortCCIIndicator = (CCIIndicator) shortCCIIndicatorField.get(underIndicatorRule);
+            shortCCIIndicatorValue = shortCCIIndicator.getValue(index);
+
+            Field minus100IndicatorField = underIndicatorRule.getClass().getDeclaredField("second");
+            minus100IndicatorField.setAccessible(true);
+            ConstantIndicator<DecimalNum> minus100Indicator = (ConstantIndicator<DecimalNum>) minus100IndicatorField.get(underIndicatorRule);
+            minus100IndicatorValue = minus100Indicator.getValue(index);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        return CCIChartData.builder()
+                .longCCIIndicatorValue(longCCIIndicatorValue.floatValue())
+                .plus100IndicatorValue(plus100IndicatorValue.floatValue())
+                .shortCCIIndicatorValue(shortCCIIndicatorValue.floatValue())
+                .minus100IndicatorValue(minus100IndicatorValue.floatValue())
+                .build();
     }
 }

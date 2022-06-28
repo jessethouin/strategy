@@ -3,6 +3,7 @@ package com.jessethouin.strategy.listeners;
 import com.jessethouin.strategy.StrategyRunnerUtil;
 import com.jessethouin.strategy.beans.ChartData;
 import com.jessethouin.strategy.beans.MarketData;
+import com.jessethouin.strategy.conf.Config;
 import net.jacobpeterson.alpaca.model.endpoint.marketdata.crypto.common.enums.Exchange;
 import net.jacobpeterson.alpaca.model.endpoint.marketdata.crypto.realtime.bar.CryptoBarMessage;
 import net.jacobpeterson.alpaca.model.endpoint.marketdata.crypto.realtime.trade.CryptoTradeMessage;
@@ -23,14 +24,16 @@ import java.time.format.DateTimeFormatter;
 public class AlpacaMarketDataListener {
     private static final Logger LOG = LogManager.getLogger();
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss,SSS Z");
+    private final Config config;
     private final BarSeries barSeries;
-    final Sinks.Many<ChartData> alpacaChartDataSink;
-    final Sinks.Many<MarketData> alpacaMarketDataSink;
+    private final Sinks.Many<ChartData> alpacaChartDataSink;
+    private final Sinks.Many<MarketData> alpacaMarketDataSink;
 
-    public AlpacaMarketDataListener(BarSeries barSeries, Sinks.Many<ChartData> alpacaChartDataSink, Sinks.Many<MarketData> alpacaMarketDataSink) {
+    public AlpacaMarketDataListener(BarSeries barSeries, Sinks.Many<ChartData> alpacaChartDataSink, Sinks.Many<MarketData> alpacaMarketDataSink, Config config) {
         this.barSeries = barSeries;
         this.alpacaChartDataSink = alpacaChartDataSink;
         this.alpacaMarketDataSink = alpacaMarketDataSink;
+        this.config = config;
     }
 
     public MarketDataListener getCryptoMarketDataListener() {
@@ -57,7 +60,8 @@ public class AlpacaMarketDataListener {
                     volume = DecimalNum.valueOf(cryptoBar.getVolume());
                     LOG.info("{} ===> {} [{}]: {}", exchange.value(), messageType, DATE_TIME_FORMATTER.format(timestamp), close);
                     barSeries.addBar(timestamp, open, high, low, close, volume);
-                    alpacaMarketDataSink.tryEmitNext(new MarketData(close));
+
+                    alpacaMarketDataSink.tryEmitNext(new MarketData(true, close));
                 }
                 case TRADE -> {
                     CryptoTradeMessage cryptoTrade = (CryptoTradeMessage) message;
@@ -68,10 +72,8 @@ public class AlpacaMarketDataListener {
                     close = DecimalNum.valueOf(cryptoTrade.getPrice());
                     LOG.debug("{} ===> {} [{}]: {}", exchange.value(), messageType, DATE_TIME_FORMATTER.format(cryptoTrade.getTimestamp()), close);
 
-                    if (StrategyRunnerUtil.addTradeToBar(barSeries, cryptoTrade.getTimestamp(), cryptoTrade.getSize(), cryptoTrade.getPrice())) {
-                        alpacaChartDataSink.tryEmitNext(new ChartData(close));
-                    }
-                    alpacaMarketDataSink.tryEmitNext(new MarketData(close));
+                    boolean newBar = StrategyRunnerUtil.addTradeToBar(barSeries, cryptoTrade.getTimestamp(), cryptoTrade.getSize(), cryptoTrade.getPrice());
+                    alpacaMarketDataSink.tryEmitNext(new MarketData(newBar, close));
                 }
                 case SUBSCRIPTION, SUCCESS, ERROR -> LOG.info("===> " + messageType + " [" + message.toString() + "]");
                 default -> throw new IllegalArgumentException("Unknown messageType in AlpacaMarketDataListener.getCryptoMarketDataListener()");
@@ -99,17 +101,16 @@ public class AlpacaMarketDataListener {
                     volume = DecimalNum.valueOf(stockBar.getVolume());
                     LOG.info("===> {} [{}]: {}", messageType, DATE_TIME_FORMATTER.format(timestamp), close);
                     barSeries.addBar(timestamp, open, high, low, close, volume);
-                    alpacaMarketDataSink.tryEmitNext(new MarketData(close));
+
+                    alpacaMarketDataSink.tryEmitNext(new MarketData(true, close));
                 }
                 case TRADE -> {
                     StockTradeMessage stockTrade = (StockTradeMessage) message;
                     close = DecimalNum.valueOf(stockTrade.getPrice());
                     LOG.debug("===> {} [{}]: {}", messageType, DATE_TIME_FORMATTER.format(stockTrade.getTimestamp()), close);
 
-                    if (StrategyRunnerUtil.addTradeToBar(barSeries, stockTrade.getTimestamp(), stockTrade.getSize().doubleValue(), stockTrade.getPrice())) {
-                        alpacaChartDataSink.tryEmitNext(new ChartData(close));
-                    }
-                    alpacaMarketDataSink.tryEmitNext(new MarketData(close));
+                    boolean newBar = StrategyRunnerUtil.addTradeToBar(barSeries, stockTrade.getTimestamp(), stockTrade.getSize().doubleValue(), stockTrade.getPrice());
+                    alpacaMarketDataSink.tryEmitNext(new MarketData(newBar, close));
                 }
                 case SUBSCRIPTION, SUCCESS, ERROR -> LOG.info("===> " + messageType + " [" + message.toString() + "]");
                 default -> throw new IllegalArgumentException("Unknown messageType in AlpacaMarketDataListener.getStockMarketDataListener()");

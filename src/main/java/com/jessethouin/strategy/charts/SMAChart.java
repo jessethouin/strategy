@@ -1,13 +1,12 @@
 package com.jessethouin.strategy.charts;
 
 import com.jessethouin.strategy.beans.ChartData;
+import com.jessethouin.strategy.beans.SMAChartData;
+import com.jessethouin.strategy.strategies.SMAStrategy;
 import org.springframework.stereotype.Component;
 import org.ta4j.core.BarSeries;
 import org.ta4j.core.BaseTradingRecord;
 import org.ta4j.core.Strategy;
-import org.ta4j.core.indicators.SMAIndicator;
-import org.ta4j.core.num.Num;
-import org.ta4j.core.rules.CrossedUpIndicatorRule;
 import reactor.core.publisher.Flux;
 
 @Component
@@ -20,14 +19,7 @@ public class SMAChart extends AbstractChart {
     }
 
     protected float[] getIndicatorData(int index) {
-        CrossedUpIndicatorRule entryRule = (CrossedUpIndicatorRule) strategy.getEntryRule();
-
-        SMAIndicator shortSMAIndicator = (SMAIndicator) entryRule.getLow();
-        Num shortSMAIndicatorValue = shortSMAIndicator.getValue(index);
-
-        SMAIndicator longSMAIndicator = (SMAIndicator) entryRule.getUp();
-        Num longSMAIndicatorValue = longSMAIndicator.getValue(index);
-
-        return new float[]{shortSMAIndicatorValue.floatValue(), longSMAIndicatorValue.floatValue()};
+        SMAChartData smaChartData = SMAStrategy.getSMAChartData(index, strategy);
+        return new float[]{smaChartData.getShortMA(), smaChartData.getLongMA()};
     }
 }

@@ -52,7 +52,7 @@ public abstract class AbstractChart extends ApplicationFrame {
         this.pack();
         UIUtils.centerFrameOnScreen(this);
         this.setVisible(true);
-        alpacaChartDataSink.subscribe(chartData -> addChartData(chartData.getClose().floatValue()));
+        alpacaChartDataSink.subscribe(chartData -> addChartData(chartData.getClose()));
     }
 
     protected void addChartData(float close) {
