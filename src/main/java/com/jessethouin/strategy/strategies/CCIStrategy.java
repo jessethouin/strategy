@@ -6,8 +6,6 @@ import org.ta4j.core.BaseStrategy;
 import org.ta4j.core.Rule;
 import org.ta4j.core.Strategy;
 import org.ta4j.core.indicators.CCIIndicator;
-import org.ta4j.core.indicators.helpers.ConstantIndicator;
-import org.ta4j.core.num.DecimalNum;
 import org.ta4j.core.num.Num;
 import org.ta4j.core.rules.AndRule;
 import org.ta4j.core.rules.OverIndicatorRule;
@@ -18,12 +16,16 @@ import java.util.Collections;
 
 public class CCIStrategy extends AbstractStrategy {
     public static Strategy buildStrategy(BarSeries series) {
+        return buildStrategy(series, 300, 5);
+    }
+
+    public static Strategy buildStrategy(BarSeries series, int longIndicator, int shortIndicator) {
         if (series == null) {
             throw new IllegalArgumentException("Series cannot be null");
         }
 
-        CCIIndicator longCci = new CCIIndicator(series, 300);
-        CCIIndicator shortCci = new CCIIndicator(series, 5);
+        CCIIndicator longCci = new CCIIndicator(series, longIndicator);
+        CCIIndicator shortCci = new CCIIndicator(series, shortIndicator);
         Num plus100 = series.numOf(100);
         Num minus100 = series.numOf(-100);
 
@@ -43,44 +45,29 @@ public class CCIStrategy extends AbstractStrategy {
     public static CCIChartData getCCIChartData(int index, Strategy strategy) {
         AndRule entryRule = (AndRule) strategy.getEntryRule();
         OverIndicatorRule overIndicatorRule = (OverIndicatorRule) entryRule.getRule1();
-        Num longCCIIndicatorValue;
-        Num plus100IndicatorValue;
-        try {
-            Field longCCIIndicatorField = overIndicatorRule.getClass().getDeclaredField("first");
-            longCCIIndicatorField.setAccessible(true);
-            CCIIndicator longCCIIndicator = (CCIIndicator) longCCIIndicatorField.get(overIndicatorRule);
-            longCCIIndicatorValue = longCCIIndicator.getValue(index);
-
-            Field plus100IndicatorField = overIndicatorRule.getClass().getDeclaredField("second");
-            plus100IndicatorField.setAccessible(true);
-            ConstantIndicator<DecimalNum> plus100Indicator = (ConstantIndicator<DecimalNum>) plus100IndicatorField.get(overIndicatorRule);
-            plus100IndicatorValue = plus100Indicator.getValue(index);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        Num longCCIIndicatorValue = reflectIndicatorValue(index, overIndicatorRule);
 
         UnderIndicatorRule underIndicatorRule = (UnderIndicatorRule) entryRule.getRule2();
-        Num shortCCIIndicatorValue;
-        Num minus100IndicatorValue;
-        try {
-            Field shortCCIIndicatorField = underIndicatorRule.getClass().getDeclaredField("first");
-            shortCCIIndicatorField.setAccessible(true);
-            CCIIndicator shortCCIIndicator = (CCIIndicator) shortCCIIndicatorField.get(underIndicatorRule);
-            shortCCIIndicatorValue = shortCCIIndicator.getValue(index);
-
-            Field minus100IndicatorField = underIndicatorRule.getClass().getDeclaredField("second");
-            minus100IndicatorField.setAccessible(true);
-            ConstantIndicator<DecimalNum> minus100Indicator = (ConstantIndicator<DecimalNum>) minus100IndicatorField.get(underIndicatorRule);
-            minus100IndicatorValue = minus100Indicator.getValue(index);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        Num shortCCIIndicatorValue = reflectIndicatorValue(index, underIndicatorRule);
 
         return CCIChartData.builder()
                 .longCCIIndicatorValue(longCCIIndicatorValue.floatValue())
-                .plus100IndicatorValue(plus100IndicatorValue.floatValue())
+                .plus100IndicatorValue(100f)
                 .shortCCIIndicatorValue(shortCCIIndicatorValue.floatValue())
-                .minus100IndicatorValue(minus100IndicatorValue.floatValue())
+                .minus100IndicatorValue(-100f)
                 .build();
+    }
+
+    private static Num reflectIndicatorValue(int index, Rule rule) {
+        Num cciIndicatorValue;
+        try {
+            Field cciIndicatorField = rule.getClass().getDeclaredField("first");
+            cciIndicatorField.setAccessible(true);
+            CCIIndicator cciIndicator = (CCIIndicator) cciIndicatorField.get(rule);
+            cciIndicatorValue = cciIndicator.getValue(index);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        return cciIndicatorValue;
     }
 }

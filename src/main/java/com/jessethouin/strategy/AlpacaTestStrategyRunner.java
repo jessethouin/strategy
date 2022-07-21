@@ -6,6 +6,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Component;
 import org.ta4j.core.*;
+import org.ta4j.core.cost.LinearTransactionCostModel;
+import org.ta4j.core.cost.ZeroCostModel;
 import org.ta4j.core.num.DecimalNum;
 
 import java.time.ZonedDateTime;
@@ -31,9 +33,12 @@ public class AlpacaTestStrategyRunner {
         LOG.info("Processing {} bars using the {} strategy.", seriesBarCount, config.getStrategy());
         barSeries.setMaximumBarCount(seriesBarCount);
 
+        LinearTransactionCostModel linearTransactionCostModel = new LinearTransactionCostModel(config.getFee());
+        ZeroCostModel zeroCostModel = new ZeroCostModel();
+
         switch (config.getBacktest()) {
             case BATCH -> {
-                BarSeriesManager seriesManager = new BarSeriesManager(barSeries);
+                BarSeriesManager seriesManager = new BarSeriesManager(barSeries, linearTransactionCostModel, zeroCostModel);
                 TradingRecord tradingRecord = seriesManager.run(strategy);
                 StrategyRunnerUtil.logSeriesStats(barSeries, tradingRecord);
             }
@@ -46,15 +51,8 @@ public class AlpacaTestStrategyRunner {
     }
 
     private int preloadTestSeries(BarSeries series) throws AlpacaClientException {
-        ZonedDateTime start = StrategyRunnerUtil.getBacktestStart(config.getBacktestStart());
-        ZonedDateTime end = StrategyRunnerUtil.getBacktestEnd(config.getBacktestEnd());
-        if (start.isAfter(end) || end.isAfter(ZonedDateTime.now()) || start.isAfter(ZonedDateTime.now())) {
-            LOG.error("Backtest start date cannot be after backtest end date, and backtest dates must be in the past. Using default of 60 minutes ago through now.\rGiven backtest start: {}\rGiven backtest end: {}", config.getBacktestStart(), config.getBacktestEnd());
-            start = ZonedDateTime.now().minusMinutes(60);
-            end = ZonedDateTime.now();
-        }
-
-        AlpacaStrategyRunnerUtil.preloadSeries(series, start, end, config);
+        ZonedDateTime[] backtestStartAndEndTimes = StrategyRunnerUtil.getBacktestStartAndEndTimes(config.getBacktestStart(), config.getBacktestEnd());
+        AlpacaStrategyRunnerUtil.preloadSeries(series, backtestStartAndEndTimes[0], backtestStartAndEndTimes[1], config);
         return series.getBarCount();
     }
 }

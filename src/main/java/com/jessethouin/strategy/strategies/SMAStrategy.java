@@ -15,12 +15,16 @@ import org.ta4j.core.rules.StopLossRule;
 
 public class SMAStrategy extends AbstractStrategy {
     public static Strategy buildStrategy(BarSeries series) {
+        return buildStrategy(series, 500, 1003);
+    }
+
+    public static Strategy buildStrategy(BarSeries series, int shortSMAIndicator, int longSMAIndicator) {
         if (series == null) {
             throw new IllegalArgumentException("Series cannot be null");
         }
         ClosePriceIndicator closePrice = new ClosePriceIndicator(series);
-        SMAIndicator shortSma = new SMAIndicator(closePrice, 500);
-        SMAIndicator longSma = new SMAIndicator(closePrice, 1003);
+        SMAIndicator shortSma = new SMAIndicator(closePrice, shortSMAIndicator);
+        SMAIndicator longSma = new SMAIndicator(closePrice, longSMAIndicator);
 
         Rule buyingRule = new CrossedUpIndicatorRule(shortSma, longSma);
         Rule sellingRule = new CrossedDownIndicatorRule(shortSma, longSma)

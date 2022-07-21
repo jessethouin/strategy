@@ -10,10 +10,9 @@ import net.jacobpeterson.alpaca.model.endpoint.orders.Order;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.ta4j.core.BarSeries;
-import org.ta4j.core.BaseBarSeriesBuilder;
-import org.ta4j.core.BaseTradingRecord;
-import org.ta4j.core.Strategy;
+import org.ta4j.core.*;
+import org.ta4j.core.cost.LinearTransactionCostModel;
+import org.ta4j.core.cost.ZeroCostModel;
 import org.ta4j.core.num.DecimalNum;
 import org.ta4j.core.num.Num;
 import reactor.core.publisher.Flux;
@@ -27,6 +26,7 @@ public class Config {
     public FeedType feed;
     public DecimalNum cash;
     public int maxBars;
+    public double fee;
     public boolean live;
     public boolean chart;
     public StrategyType strategy;
@@ -88,7 +88,9 @@ public class Config {
 
     @Bean
     public BaseTradingRecord tradingRecord() {
-        return new BaseTradingRecord();
+        LinearTransactionCostModel linearTransactionCostModel = new LinearTransactionCostModel(getFee());
+        ZeroCostModel zeroCostModel = new ZeroCostModel();
+        return new BaseTradingRecord(Trade.TradeType.BUY, linearTransactionCostModel, zeroCostModel);
     }
 
     @Bean

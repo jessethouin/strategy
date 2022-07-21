@@ -21,11 +21,14 @@ import java.util.Collections;
 
 public class BollingerBandStrategy extends AbstractStrategy {
     public static Strategy buildStrategy(BarSeries series) {
+        return buildStrategy(series, 16);
+    }
+
+    public static Strategy buildStrategy(BarSeries series, int moving) {
         if (series == null) {
             throw new IllegalArgumentException("Series cannot be null");
         }
 
-        int moving = 300;
         ClosePriceIndicator closePrice = new ClosePriceIndicator(series);
         EMAIndicator ema = new EMAIndicator(closePrice, moving);
         StandardDeviationIndicator standardDeviationIndicator = new StandardDeviationIndicator(closePrice, moving);
@@ -39,7 +42,7 @@ public class BollingerBandStrategy extends AbstractStrategy {
 
         Rule entryRule = new CrossedDownIndicatorRule(closePrice, lowerIndicator);
         Rule exitRule = new CrossedUpIndicatorRule(closePrice, upperIndicator);
-        return new BaseStrategy(entryRule, exitRule, 300);
+        return new BaseStrategy(entryRule, exitRule, moving);
     }
 
     public static BollingerBandsChartData getBollingerBandsChartData(int index, Strategy strategy) {

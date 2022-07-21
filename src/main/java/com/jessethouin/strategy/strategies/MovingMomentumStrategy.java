@@ -17,6 +17,9 @@ import java.util.Collections;
 
 public class MovingMomentumStrategy extends AbstractStrategy {
     public static Strategy buildStrategy(BarSeries series) {
+        return buildStrategy(series, 9, 26, 14, 18, 20, 80);
+    }
+    public static Strategy buildStrategy(BarSeries series, int shortEMAIndicator, int longEMAIndicator, int oscillatorKIndicator, int emaMacDIndicator, int crossDownOscillator, int crossUpOscillator) {
         if (series == null) {
             throw new IllegalArgumentException("Series cannot be null");
         }
@@ -27,25 +30,25 @@ public class MovingMomentumStrategy extends AbstractStrategy {
         // moving average.
         // The bias is bearish when the shorter-moving average moves below the longer
         // moving average.
-        EMAIndicator shortEma = new EMAIndicator(closePrice, 9);
-        EMAIndicator longEma = new EMAIndicator(closePrice, 26);
+        EMAIndicator shortEma = new EMAIndicator(closePrice, shortEMAIndicator);
+        EMAIndicator longEma = new EMAIndicator(closePrice, longEMAIndicator);
 
-        StochasticOscillatorKIndicator stochasticOscillK = new StochasticOscillatorKIndicator(series, 14);
+        StochasticOscillatorKIndicator stochasticOscillatorK = new StochasticOscillatorKIndicator(series, oscillatorKIndicator);
 
-        MACDIndicator macd = new MACDIndicator(closePrice, 9, 26);
-        EMAIndicator emaMacd = new EMAIndicator(macd, 18);
+        MACDIndicator macD = new MACDIndicator(closePrice, shortEMAIndicator, longEMAIndicator);
+        EMAIndicator emaMacD = new EMAIndicator(macD, emaMacDIndicator);
 
-        Collections.addAll(indicators, shortEma, longEma, stochasticOscillK, macd, emaMacd);
+        Collections.addAll(indicators, shortEma, longEma, stochasticOscillatorK, macD, emaMacD);
 
         // Entry rule
         Rule entryRule = new OverIndicatorRule(shortEma, longEma) // Trend
-                .and(new CrossedDownIndicatorRule(stochasticOscillK, 20)) // Signal 1
-                .and(new OverIndicatorRule(macd, emaMacd)); // Signal 2
+                .and(new CrossedDownIndicatorRule(stochasticOscillatorK, crossDownOscillator)) // Signal 1
+                .and(new OverIndicatorRule(macD, emaMacD)); // Signal 2
 
         // Exit rule
         Rule exitRule = new UnderIndicatorRule(shortEma, longEma) // Trend
-                .and(new CrossedUpIndicatorRule(stochasticOscillK, 80)) // Signal 1
-                .and(new UnderIndicatorRule(macd, emaMacd)); // Signal 2
+                .and(new CrossedUpIndicatorRule(stochasticOscillatorK, crossUpOscillator)) // Signal 1
+                .and(new UnderIndicatorRule(macD, emaMacD)); // Signal 2
 
         return new BaseStrategy(entryRule, exitRule);
     }

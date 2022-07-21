@@ -3,6 +3,9 @@ package com.jessethouin.strategy;
 import com.jessethouin.strategy.conf.MarketOperation;
 import com.jessethouin.strategy.conf.StrategyType;
 import com.jessethouin.strategy.strategies.*;
+import net.jacobpeterson.alpaca.model.endpoint.marketdata.common.realtime.bar.BarMessage;
+import net.jacobpeterson.alpaca.model.endpoint.marketdata.crypto.realtime.bar.CryptoBarMessage;
+import net.jacobpeterson.alpaca.model.endpoint.marketdata.stock.realtime.bar.StockBarMessage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
@@ -47,6 +50,17 @@ public class StrategyRunnerUtil {
         return end;
     }
 
+    public static ZonedDateTime[] getBacktestStartAndEndTimes(String givenStart, String givenEnd) {
+        ZonedDateTime start = StrategyRunnerUtil.getBacktestStart(givenStart);
+        ZonedDateTime end = StrategyRunnerUtil.getBacktestEnd(givenEnd);
+        if (start.isAfter(end) || end.isAfter(ZonedDateTime.now()) || start.isAfter(ZonedDateTime.now())) {
+            LOG.error("Backtest start date cannot be after backtest end date, and backtest dates must be in the past. Using default of 75 minutes ago through 15 minutes ago.\rGiven backtest start: {}\rGiven backtest end: {}", givenStart, givenEnd);
+            start = ZonedDateTime.now().minusMinutes(75);
+            end = ZonedDateTime.now().minusMinutes(15);
+        }
+        return new ZonedDateTime[]{start, end};
+    }
+
     public static Strategy chooseStrategy(StrategyType strategy, BarSeries barSeries) {
         return switch (strategy) {
             case SMA -> SMAStrategy.buildStrategy(barSeries);
@@ -56,6 +70,21 @@ public class StrategyRunnerUtil {
             case CCI -> CCIStrategy.buildStrategy(barSeries);
             case DEFAULT -> DefaultStrategy.buildStrategy(barSeries);
         };
+    }
+
+    public static Bar getBar(BarMessage barMessage, int duration) {
+        ZonedDateTime timestamp = barMessage.getTimestamp();
+        DecimalNum open = DecimalNum.valueOf(barMessage.getOpen());
+        DecimalNum high = DecimalNum.valueOf(barMessage.getHigh());
+        DecimalNum low = DecimalNum.valueOf(barMessage.getLow());
+        DecimalNum close = DecimalNum.valueOf(barMessage.getClose());
+        DecimalNum volume = DecimalNum.valueOf(0);
+        if (barMessage instanceof CryptoBarMessage)
+            volume = DecimalNum.valueOf(((CryptoBarMessage) barMessage).getVolume());
+        else if (barMessage instanceof StockBarMessage) {
+            volume = DecimalNum.valueOf(((StockBarMessage) barMessage).getVolume());
+        }
+        return new BaseBar(Duration.ofSeconds(duration), timestamp, open, high, low, close, volume, DecimalNum.valueOf(0));
     }
 
     public static boolean addTradeToBar(BarSeries barSeries, ZonedDateTime timestamp, Double size, Double price) {
@@ -79,7 +108,8 @@ public class StrategyRunnerUtil {
         return newBar;
     }
 
-    public static void logSeriesStats(BarSeries barSeries, TradingRecord tradingRecord) {
+    public synchronized static void logSeriesStats(BarSeries barSeries, TradingRecord tradingRecord) {
+        LOG.info("begin -----");
         LOG.info("\tNumber of positions for the strategy: {}", tradingRecord.getPositionCount());
         LOG.info("\tTotal return for the strategy: {}", new GrossReturnCriterion().calculate(barSeries, tradingRecord));
 
@@ -93,6 +123,7 @@ public class StrategyRunnerUtil {
         // Getting the reward-risk ratio
         AnalysisCriterion rewardRiskRatio = new ReturnOverMaxDrawdownCriterion();
         LOG.info("\tReward-risk ratio: {}", rewardRiskRatio.calculate(barSeries, tradingRecord));
+        LOG.info("end   -----");
     }
 
     synchronized public static MarketOperation exerciseStrategy(BarSeries barSeries, Strategy strategy, TradingRecord tradingRecord, DecimalNum close, DecimalNum cash)  {
@@ -130,10 +161,5 @@ public class StrategyRunnerUtil {
     @NotNull
     public static DecimalNum get90PercentBuyBudget(DecimalNum close, DecimalNum cash) {
         return (DecimalNum) cash.multipliedBy(DecimalNum.valueOf(.90)).dividedBy(close);
-    }
-
-    @NotNull
-    public static DecimalNum get95PercentBuyBudget(DecimalNum close, DecimalNum cash) {
-        return (DecimalNum) cash.multipliedBy(DecimalNum.valueOf(.95)).dividedBy(close);
     }
 }

@@ -52,16 +52,11 @@ public class AlpacaStrategyRunnerUtil {
     }
 
     public static void preloadCryptoTradeSeries(BarSeries barSeries, ZonedDateTime start, ZonedDateTime end, String symbol) throws AlpacaClientException {
-        CryptoTradesResponse cryptoTradesResponse = ALPACA_CRYPTO_API.getTrades(symbol, List.of(Exchange.COINBASE), start, end, 10000, null);
-        String nextPageToken = cryptoTradesResponse.getNextPageToken();
-        ArrayList<CryptoTrade> trades = cryptoTradesResponse.getTrades();
+        ArrayList<CryptoTrade> trades = getCryptoTrades(start, end, symbol);
+        preloadCryptoTradeSeries(barSeries, trades);
+    }
 
-        while (nextPageToken != null) {
-            cryptoTradesResponse = ALPACA_CRYPTO_API.getTrades(symbol, List.of(Exchange.COINBASE), start, end, 10000, nextPageToken);
-            nextPageToken = cryptoTradesResponse.getNextPageToken();
-            trades.addAll(cryptoTradesResponse.getTrades());
-        }
-
+    public static void preloadCryptoTradeSeries(BarSeries barSeries, ArrayList<CryptoTrade> trades) {
         trades.forEach(cryptoTrade -> {
             if (barSeries.isEmpty()) {
                 BaseBar bar = BaseBar.builder()
@@ -73,6 +68,19 @@ public class AlpacaStrategyRunnerUtil {
             }
             StrategyRunnerUtil.addTradeToBar(barSeries, cryptoTrade.getTimestamp(), cryptoTrade.getSize(), cryptoTrade.getPrice());
         });
+    }
+
+    public static ArrayList<CryptoTrade> getCryptoTrades(ZonedDateTime start, ZonedDateTime end, String symbol) throws AlpacaClientException {
+        CryptoTradesResponse cryptoTradesResponse = ALPACA_CRYPTO_API.getTrades(symbol, List.of(Exchange.COINBASE), start, end, 10000, null);
+        String nextPageToken = cryptoTradesResponse.getNextPageToken();
+        ArrayList<CryptoTrade> trades = cryptoTradesResponse.getTrades();
+
+        while (nextPageToken != null) {
+            cryptoTradesResponse = ALPACA_CRYPTO_API.getTrades(symbol, List.of(Exchange.COINBASE), start, end, 10000, nextPageToken);
+            nextPageToken = cryptoTradesResponse.getNextPageToken();
+            trades.addAll(cryptoTradesResponse.getTrades());
+        }
+        return trades;
     }
 
     public static void preloadCryptoBarSeries(BarSeries barSeries, ZonedDateTime start, int maxBars, String symbol) throws AlpacaClientException {
@@ -87,15 +95,7 @@ public class AlpacaStrategyRunnerUtil {
     }
 
     public static void preloadStockTradeSeries(BarSeries barSeries, ZonedDateTime start, ZonedDateTime end, String symbol) throws AlpacaClientException {
-        StockTradesResponse stockTradesResponse = ALPACA_STOCK_API.getTrades(symbol, start, end, 10000, null);
-        String nextPageToken = stockTradesResponse.getNextPageToken();
-        ArrayList<StockTrade> trades = stockTradesResponse.getTrades();
-
-        while (nextPageToken != null) {
-            stockTradesResponse = ALPACA_STOCK_API.getTrades(symbol, start, end, 10000, nextPageToken);
-            nextPageToken = stockTradesResponse.getNextPageToken();
-            trades.addAll(stockTradesResponse.getTrades());
-        }
+        ArrayList<StockTrade> trades = getStockTrades(start, end, symbol);
 
         trades.forEach(stockTrade -> {
             if (barSeries.isEmpty()) {
@@ -108,6 +108,19 @@ public class AlpacaStrategyRunnerUtil {
             }
             StrategyRunnerUtil.addTradeToBar(barSeries, stockTrade.getTimestamp(), stockTrade.getSize().doubleValue(), stockTrade.getPrice());
         });
+    }
+
+    public static ArrayList<StockTrade> getStockTrades(ZonedDateTime start, ZonedDateTime end, String symbol) throws AlpacaClientException {
+        StockTradesResponse stockTradesResponse = ALPACA_STOCK_API.getTrades(symbol, start, end, 10000, null);
+        String nextPageToken = stockTradesResponse.getNextPageToken();
+        ArrayList<StockTrade> trades = stockTradesResponse.getTrades();
+
+        while (nextPageToken != null) {
+            stockTradesResponse = ALPACA_STOCK_API.getTrades(symbol, start, end, 10000, nextPageToken);
+            nextPageToken = stockTradesResponse.getNextPageToken();
+            trades.addAll(stockTradesResponse.getTrades());
+        }
+        return trades;
     }
 
     public static void preloadStockBarSeries(BarSeries barSeries, ZonedDateTime start, ZonedDateTime end, int maxBars, String symbol) throws AlpacaClientException {
