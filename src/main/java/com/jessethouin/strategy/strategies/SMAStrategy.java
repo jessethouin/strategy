@@ -15,7 +15,7 @@ import org.ta4j.core.rules.StopLossRule;
 
 public class SMAStrategy extends AbstractStrategy {
     public static Strategy buildStrategy(BarSeries series) {
-        return buildStrategy(series, 500, 1003);
+        return buildStrategy(series, 1, 8);
     }
 
     public static Strategy buildStrategy(BarSeries series, int shortSMAIndicator, int longSMAIndicator) {

@@ -2,7 +2,6 @@ package com.jessethouin.strategy.listeners;
 
 import com.jessethouin.strategy.StrategyRunnerUtil;
 import com.jessethouin.strategy.beans.MarketData;
-import net.jacobpeterson.alpaca.model.endpoint.marketdata.crypto.common.enums.Exchange;
 import net.jacobpeterson.alpaca.model.endpoint.marketdata.crypto.realtime.bar.CryptoBarMessage;
 import net.jacobpeterson.alpaca.model.endpoint.marketdata.crypto.realtime.trade.CryptoTradeMessage;
 import net.jacobpeterson.alpaca.websocket.marketdata.MarketDataListener;
@@ -36,11 +35,8 @@ public class AlpacaCryptoMarketDataListener {
                 case BAR -> {
                     CryptoBarMessage cryptoBarMessage = (CryptoBarMessage) message;
 
-                    Exchange exchange = cryptoBarMessage.getExchange();
-                    if (!Exchange.COINBASE.equals(exchange)) return;
-
                     Bar bar = StrategyRunnerUtil.getBar(cryptoBarMessage, 60);
-                    LOG.info("{} ===> {} [{}]: {}", exchange.value(), messageType, DATE_TIME_FORMATTER.format(bar.getEndTime()), bar.getClosePrice());
+                    LOG.info("===> {} [{}]: {}", messageType, DATE_TIME_FORMATTER.format(bar.getEndTime()), bar.getClosePrice());
                     barSeries.addBar(bar);
 
                     alpacaMarketDataSink.tryEmitNext(new MarketData(true, (DecimalNum) bar.getClosePrice()));
@@ -48,11 +44,8 @@ public class AlpacaCryptoMarketDataListener {
                 case TRADE -> {
                     CryptoTradeMessage cryptoTrade = (CryptoTradeMessage) message;
 
-                    Exchange exchange = cryptoTrade.getExchange();
-                    if (!Exchange.COINBASE.equals(exchange)) return;
-
                     close = DecimalNum.valueOf(cryptoTrade.getPrice());
-                    LOG.debug("{} ===> {} [{}]: {}", exchange.value(), messageType, DATE_TIME_FORMATTER.format(cryptoTrade.getTimestamp()), close);
+                    LOG.debug("===> {} [{}]: {}", messageType, DATE_TIME_FORMATTER.format(cryptoTrade.getTimestamp()), close);
 
                     boolean newBar = StrategyRunnerUtil.addTradeToBar(barSeries, cryptoTrade.getTimestamp(), cryptoTrade.getSize(), cryptoTrade.getPrice());
                     alpacaMarketDataSink.tryEmitNext(new MarketData(newBar, close));

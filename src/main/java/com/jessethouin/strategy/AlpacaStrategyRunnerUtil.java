@@ -3,7 +3,6 @@ package com.jessethouin.strategy;
 import com.jessethouin.strategy.conf.Config;
 import com.jessethouin.strategy.conf.MarketOperation;
 import net.jacobpeterson.alpaca.model.endpoint.marketdata.common.historical.bar.enums.BarTimePeriod;
-import net.jacobpeterson.alpaca.model.endpoint.marketdata.crypto.common.enums.Exchange;
 import net.jacobpeterson.alpaca.model.endpoint.marketdata.crypto.historical.bar.CryptoBarsResponse;
 import net.jacobpeterson.alpaca.model.endpoint.marketdata.crypto.historical.trade.CryptoTrade;
 import net.jacobpeterson.alpaca.model.endpoint.marketdata.crypto.historical.trade.CryptoTradesResponse;
@@ -25,8 +24,7 @@ import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 import static com.jessethouin.strategy.conf.AlpacaApiServices.*;
 
@@ -38,7 +36,7 @@ public class AlpacaStrategyRunnerUtil {
         switch (config.getFeed()) {
             case BAR: {
                 switch (config.getMarketType()) {
-                    case CRYPTO -> preloadCryptoBarSeries(barSeries, start, config.getMaxBars(), config.getSymbol());
+                    case CRYPTO -> preloadCryptoBarSeries(barSeries, start, end, config.getMaxBars(), config.getSymbol());
                     case STOCK -> preloadStockBarSeries(barSeries, start, end, config.getMaxBars(), config.getSymbol());
                 }
             }
@@ -71,21 +69,21 @@ public class AlpacaStrategyRunnerUtil {
     }
 
     public static ArrayList<CryptoTrade> getCryptoTrades(ZonedDateTime start, ZonedDateTime end, String symbol) throws AlpacaClientException {
-        CryptoTradesResponse cryptoTradesResponse = ALPACA_CRYPTO_API.getTrades(symbol, List.of(Exchange.COINBASE), start, end, 10000, null);
+        CryptoTradesResponse cryptoTradesResponse = ALPACA_CRYPTO_API.getTrades(List.of(symbol), start, end, 10000, null);
         String nextPageToken = cryptoTradesResponse.getNextPageToken();
-        ArrayList<CryptoTrade> trades = cryptoTradesResponse.getTrades();
+        ArrayList<CryptoTrade> trades = cryptoTradesResponse.getTrades().get(symbol);
 
         while (nextPageToken != null) {
-            cryptoTradesResponse = ALPACA_CRYPTO_API.getTrades(symbol, List.of(Exchange.COINBASE), start, end, 10000, nextPageToken);
+            cryptoTradesResponse = ALPACA_CRYPTO_API.getTrades(List.of(symbol), start, end, 10000, nextPageToken);
             nextPageToken = cryptoTradesResponse.getNextPageToken();
-            trades.addAll(cryptoTradesResponse.getTrades());
+            trades.addAll(cryptoTradesResponse.getTrades().get(symbol));
         }
         return trades;
     }
 
-    public static void preloadCryptoBarSeries(BarSeries barSeries, ZonedDateTime start, int maxBars, String symbol) throws AlpacaClientException {
-        CryptoBarsResponse cryptoBarsResponse = ALPACA_CRYPTO_API.getBars(symbol, List.of(Exchange.COINBASE), start.minus(maxBars, ChronoUnit.MINUTES), maxBars - 1, null, 1, BarTimePeriod.MINUTE);
-        cryptoBarsResponse.getBars().forEach(cryptoBar -> barSeries.addBar(
+    public static void preloadCryptoBarSeries(BarSeries barSeries, ZonedDateTime start, ZonedDateTime end, int maxBars, String symbol) throws AlpacaClientException {
+        CryptoBarsResponse cryptoBarsResponse = ALPACA_CRYPTO_API.getBars(List.of(symbol), start.minus(maxBars, ChronoUnit.MINUTES), end, maxBars - 1, null, 1, BarTimePeriod.MINUTE);
+        cryptoBarsResponse.getBars().get(symbol).forEach(cryptoBar -> barSeries.addBar(
                 cryptoBar.getTimestamp(),
                 DecimalNum.valueOf(cryptoBar.getOpen()),
                 DecimalNum.valueOf(cryptoBar.getHigh()),

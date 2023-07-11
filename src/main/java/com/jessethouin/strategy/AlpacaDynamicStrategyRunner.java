@@ -7,7 +7,6 @@ import net.jacobpeterson.alpaca.model.endpoint.marketdata.crypto.historical.trad
 import net.jacobpeterson.alpaca.rest.AlpacaClientException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StopWatch;
 import org.ta4j.core.*;
@@ -25,13 +24,11 @@ import java.util.concurrent.ThreadPoolExecutor;
 public class AlpacaDynamicStrategyRunner {
     private static final Logger LOG = LogManager.getLogger();
     private final Config config;
-    private final ApplicationContext context;
     final Num[] highestReturn = {DecimalNum.valueOf(0)};
     Map<String, Integer> winningCombination = new HashMap<>();
 
-    public AlpacaDynamicStrategyRunner(Config config, ApplicationContext context) {
+    public AlpacaDynamicStrategyRunner(Config config) {
         this.config = config;
-        this.context = context;
     }
 
     public void run() throws AlpacaClientException {
@@ -59,6 +56,7 @@ public class AlpacaDynamicStrategyRunner {
         }
 
         LOG.info("Winning move is {} with return of {}", winningCombination, highestReturn[0]);
+        System.exit(0);
     }
 
     private void getSMATasks(BaseBarSeries barSeries, List<Callable<Num>> tasks) {
