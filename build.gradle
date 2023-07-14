@@ -1,5 +1,5 @@
 plugins {
-    id 'org.springframework.boot' version '2.6.7'
+    id 'org.springframework.boot' version '3.1.0'
     id 'io.spring.dependency-management' version '1.0.11.RELEASE'
     id 'java'
 }
@@ -20,7 +20,6 @@ repositories {
 }
 
 dependencies {
-//    implementation 'org.springframework.boot:spring-boot-starter'
     implementation 'org.springframework.boot:spring-boot-starter-rsocket'
     implementation 'org.ta4j:ta4j-core:0.14'
     implementation 'net.jacobpeterson:alpaca-java:9.1.4-SNAPSHOT'
@@ -29,6 +28,7 @@ dependencies {
     implementation platform('io.projectreactor:reactor-bom:2020.0.19')
     implementation 'io.projectreactor:reactor-core'
     implementation 'de.sjwimmer.ta4j-charting:lib:0.1'
+    implementation 'org.yaml:snakeyaml:2.0'
     compileOnly 'org.projectlombok:lombok'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
@@ -36,6 +36,6 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }
 
-tasks.named('test') {
+test {
     useJUnitPlatform()
 }

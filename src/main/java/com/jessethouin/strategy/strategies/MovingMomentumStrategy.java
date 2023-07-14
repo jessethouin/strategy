@@ -2,16 +2,11 @@ package com.jessethouin.strategy.strategies;
 
 import org.ta4j.core.BarSeries;
 import org.ta4j.core.BaseStrategy;
-import org.ta4j.core.Rule;
 import org.ta4j.core.Strategy;
 import org.ta4j.core.indicators.EMAIndicator;
 import org.ta4j.core.indicators.MACDIndicator;
 import org.ta4j.core.indicators.StochasticOscillatorKIndicator;
 import org.ta4j.core.indicators.helpers.ClosePriceIndicator;
-import org.ta4j.core.rules.CrossedDownIndicatorRule;
-import org.ta4j.core.rules.CrossedUpIndicatorRule;
-import org.ta4j.core.rules.OverIndicatorRule;
-import org.ta4j.core.rules.UnderIndicatorRule;
 
 import java.util.Collections;
 
@@ -40,16 +35,8 @@ public class MovingMomentumStrategy extends AbstractStrategy {
 
         Collections.addAll(indicators, shortEma, longEma, stochasticOscillatorK, macD, emaMacD);
 
-        // Entry rule
-        Rule entryRule = new OverIndicatorRule(shortEma, longEma) // Trend
-                .and(new CrossedDownIndicatorRule(stochasticOscillatorK, crossDownOscillator)) // Signal 1
-                .and(new OverIndicatorRule(macD, emaMacD)); // Signal 2
+        Rules rules = getRules(crossDownOscillator, crossUpOscillator, shortEma, longEma, stochasticOscillatorK, macD, emaMacD);
 
-        // Exit rule
-        Rule exitRule = new UnderIndicatorRule(shortEma, longEma) // Trend
-                .and(new CrossedUpIndicatorRule(stochasticOscillatorK, crossUpOscillator)) // Signal 1
-                .and(new UnderIndicatorRule(macD, emaMacD)); // Signal 2
-
-        return new BaseStrategy(entryRule, exitRule);
+        return new BaseStrategy(rules.entryRule(), rules.exitRule());
     }
 }

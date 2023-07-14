@@ -12,7 +12,7 @@ public class CCIChartData extends ChartData {
     private float shortCCIIndicatorValue;
     private float minus100IndicatorValue;
 
-    @Builder
+    @Builder @SuppressWarnings("unused")
     public CCIChartData(float open, float close, float high, float low, float volume, float longCCIIndicatorValue, float plus100IndicatorValue, float shortCCIIndicatorValue, float minus100IndicatorValue) {
         super(open, close, high, low, volume);
         this.longCCIIndicatorValue = longCCIIndicatorValue;

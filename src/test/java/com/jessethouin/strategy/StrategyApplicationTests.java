@@ -27,10 +27,6 @@ class StrategyApplicationTests {
     private static final String SYMBOLS = "BTC/USD,LTC/USD";
 
     @Test
-    void contextLoads() {
-    }
-
-    @Test
     void testGetBars() {
         try {
             CryptoBarsResponse cryptoBarsResponse = ALPACA_CRYPTO_API.getBars(List.of(SYMBOLS),
@@ -87,7 +83,7 @@ class StrategyApplicationTests {
                     assertTrue(cryptoTrade.getSize() > 0);
                     LOG.info("trade size for " + s + " : " + cryptoTrade.getSize());
                     assertNotNull(cryptoTrade.getTakerSide());
-                    LOG.info("trade takerside for " + s + " : " + cryptoTrade.getTakerSide());
+                    LOG.info("trade taker side for " + s + " : " + cryptoTrade.getTakerSide());
                 });
             });
         } catch (AlpacaClientException e) {
@@ -161,7 +157,7 @@ class StrategyApplicationTests {
                 assertTrue(cryptoTrade.getSize() > 0);
                 LOG.info("latest trade size for " + s + " : " + cryptoTrade.getSize());
                 assertNotNull(cryptoTrade.getTakerSide());
-                LOG.info("latest trade takerside for " + s + " : " + cryptoTrade.getTakerSide());
+                LOG.info("latest trade taker side for " + s + " : " + cryptoTrade.getTakerSide());
             });
         } catch (AlpacaClientException e) {
             throw new RuntimeException(e);

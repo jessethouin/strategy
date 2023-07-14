@@ -25,7 +25,7 @@ public class AlpacaDynamicStrategyRunner {
     private static final Logger LOG = LogManager.getLogger();
     private final Config config;
     final Num[] highestReturn = {DecimalNum.valueOf(0)};
-    Map<String, Integer> winningCombination = new HashMap<>();
+    final Map<String, Integer> winningCombination = new HashMap<>();
 
     public AlpacaDynamicStrategyRunner(Config config) {
         this.config = config;

@@ -4,7 +4,6 @@ import net.jacobpeterson.alpaca.AlpacaAPI;
 import net.jacobpeterson.alpaca.model.endpoint.marketdata.common.realtime.enums.MarketDataMessageType;
 import net.jacobpeterson.alpaca.model.endpoint.streaming.enums.StreamingMessageType;
 import net.jacobpeterson.alpaca.rest.endpoint.account.AccountEndpoint;
-import net.jacobpeterson.alpaca.rest.endpoint.accountactivities.AccountActivitiesEndpoint;
 import net.jacobpeterson.alpaca.rest.endpoint.marketdata.crypto.CryptoMarketDataEndpoint;
 import net.jacobpeterson.alpaca.rest.endpoint.marketdata.stock.StockMarketDataEndpoint;
 import net.jacobpeterson.alpaca.rest.endpoint.orders.OrdersEndpoint;
@@ -20,7 +19,6 @@ import java.util.concurrent.TimeUnit;
 public class AlpacaApiServices {
     public static final AlpacaAPI ALPACA_API;
     public static final AccountEndpoint ALPACA_ACCOUNT_API;
-    public static final AccountActivitiesEndpoint ALPACA_ACCOUNT_ACTIVITIES_API;
     public static final CryptoMarketDataEndpoint ALPACA_CRYPTO_API;
     public static final StockMarketDataEndpoint ALPACA_STOCK_API;
     public static final OrdersEndpoint ALPACA_ORDERS_API;
@@ -32,7 +30,6 @@ public class AlpacaApiServices {
     static {
         ALPACA_API = new AlpacaAPI();
         ALPACA_ACCOUNT_API = ALPACA_API.account();
-        ALPACA_ACCOUNT_ACTIVITIES_API = ALPACA_API.accountActivities();
         ALPACA_CRYPTO_API = ALPACA_API.cryptoMarketData();
         ALPACA_STOCK_API = ALPACA_API.stockMarketData();
         ALPACA_ORDERS_API = ALPACA_API.orders();
@@ -63,14 +60,13 @@ public class AlpacaApiServices {
 
     public static void restartCryptoMarketDataListener(MarketDataListener marketDataListener, Config config) {
         ALPACA_CRYPTO_STREAMING_API.disconnect();
+        boolean isConnected = ALPACA_CRYPTO_STREAMING_API.isConnected();
         while (ALPACA_CRYPTO_STREAMING_API.isConnected()) {
-            try {
-                Thread.sleep(5000L);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
+            isConnected = true;
         }
-        startCryptoMarketDataListener(marketDataListener, config);
+        if (!isConnected) {
+            startCryptoMarketDataListener(marketDataListener, config);
+        }
     }
 
     public static void connectToStockStream() {
@@ -94,14 +90,13 @@ public class AlpacaApiServices {
 
     public static void restartStockMarketDataListener(MarketDataListener marketDataListener, Config config) {
         ALPACA_STOCK_STREAMING_API.disconnect();
+        boolean isConnected = ALPACA_STOCK_STREAMING_API.isConnected();
         while (ALPACA_STOCK_STREAMING_API.isConnected()) {
-            try {
-                Thread.sleep(5000L);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
+            isConnected = true;
         }
-        startStockMarketDataListener(marketDataListener, config);
+        if (!isConnected) {
+            startStockMarketDataListener(marketDataListener, config);
+        }
     }
 
     public static void connectToUpdatesStream() {
@@ -122,13 +117,12 @@ public class AlpacaApiServices {
 
     public static void restartOrderUpdatesListener(StreamingListener streamingListener) {
         ALPACA_STREAMING_API.disconnect();
+        boolean isConnected = ALPACA_STOCK_STREAMING_API.isConnected();
         while (ALPACA_STREAMING_API.isConnected()) {
-            try {
-                Thread.sleep(5000L);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
+            isConnected = true;
         }
-        startOrderUpdatesListener(streamingListener);
+        if (!isConnected) {
+            startOrderUpdatesListener(streamingListener);
+        }
     }
 }

@@ -11,7 +11,7 @@ public class BollingerBandsChartData extends ChartData {
     private float middleIndicatorValue;
     private float lowerIndicatorValue;
 
-    @Builder
+    @Builder @SuppressWarnings("unused")
     public BollingerBandsChartData(float open, float close, float high, float low, float volume, float upperIndicatorValue, float middleIndicatorValue, float lowerIndicatorValue) {
         super(open, close, high, low, volume);
         this.upperIndicatorValue = upperIndicatorValue;
