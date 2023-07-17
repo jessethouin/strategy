@@ -12,6 +12,8 @@ import net.jacobpeterson.alpaca.websocket.marketdata.MarketDataListener;
 import net.jacobpeterson.alpaca.websocket.marketdata.MarketDataWebsocketInterface;
 import net.jacobpeterson.alpaca.websocket.streaming.StreamingListener;
 import net.jacobpeterson.alpaca.websocket.streaming.StreamingWebsocketInterface;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -26,6 +28,7 @@ public class AlpacaApiServices {
     public static final StreamingWebsocketInterface ALPACA_STREAMING_API;
     public static final MarketDataWebsocketInterface ALPACA_CRYPTO_STREAMING_API;
     public static final MarketDataWebsocketInterface ALPACA_STOCK_STREAMING_API;
+    private static final Logger LOG = LogManager.getLogger();
 
     static {
         ALPACA_API = new AlpacaAPI();
@@ -60,13 +63,12 @@ public class AlpacaApiServices {
 
     public static void restartCryptoMarketDataListener(MarketDataListener marketDataListener, Config config) {
         ALPACA_CRYPTO_STREAMING_API.disconnect();
-        boolean isConnected = ALPACA_CRYPTO_STREAMING_API.isConnected();
+        LOG.info("Waiting for ALPACA_CRYPTO_STREAMING_API to disconnect...");
         while (ALPACA_CRYPTO_STREAMING_API.isConnected()) {
-            isConnected = true;
+            LOG.debug("Waiting for ALPACA_CRYPTO_STREAMING_API to disconnect...");
         }
-        if (!isConnected) {
-            startCryptoMarketDataListener(marketDataListener, config);
-        }
+        LOG.info("Finished waiting for ALPACA_CRYPTO_STREAMING_API to disconnect.");
+        startCryptoMarketDataListener(marketDataListener, config);
     }
 
     public static void connectToStockStream() {
@@ -90,13 +92,12 @@ public class AlpacaApiServices {
 
     public static void restartStockMarketDataListener(MarketDataListener marketDataListener, Config config) {
         ALPACA_STOCK_STREAMING_API.disconnect();
-        boolean isConnected = ALPACA_STOCK_STREAMING_API.isConnected();
+        LOG.info("Waiting for ALPACA_STOCK_STREAMING_API to disconnect...");
         while (ALPACA_STOCK_STREAMING_API.isConnected()) {
-            isConnected = true;
+            LOG.debug("Waiting for ALPACA_STOCK_STREAMING_API to disconnect...");
         }
-        if (!isConnected) {
-            startStockMarketDataListener(marketDataListener, config);
-        }
+        LOG.info("Finished waiting for ALPACA_STOCK_STREAMING_API to disconnect.");
+        startStockMarketDataListener(marketDataListener, config);
     }
 
     public static void connectToUpdatesStream() {
@@ -117,12 +118,11 @@ public class AlpacaApiServices {
 
     public static void restartOrderUpdatesListener(StreamingListener streamingListener) {
         ALPACA_STREAMING_API.disconnect();
-        boolean isConnected = ALPACA_STOCK_STREAMING_API.isConnected();
+        LOG.info("Waiting for ALPACA_STREAMING_API to disconnect...");
         while (ALPACA_STREAMING_API.isConnected()) {
-            isConnected = true;
+            LOG.debug("Waiting for ALPACA_STREAMING_API to disconnect...");
         }
-        if (!isConnected) {
-            startOrderUpdatesListener(streamingListener);
-        }
+        LOG.info("Finished waiting for ALPACA_STREAMING_API to disconnect.");
+        startOrderUpdatesListener(streamingListener);
     }
 }

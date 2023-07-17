@@ -35,9 +35,14 @@ public class AlpacaDynamicStrategyRunner {
         ZonedDateTime[] backtestStartAndEndTimes = StrategyRunnerUtil.getBacktestStartAndEndTimes(config.getBacktestStart(), config.getBacktestEnd());
 
         BaseBarSeries barSeries = new BaseBarSeriesBuilder().withName(config.getSymbol()).build();
-        final ArrayList<CryptoTrade> cryptoTrades = AlpacaStrategyRunnerUtil.getCryptoTrades(backtestStartAndEndTimes[0], backtestStartAndEndTimes[1], config.getSymbol());
 
-        AlpacaStrategyRunnerUtil.preloadCryptoTradeSeries(barSeries, cryptoTrades);
+        switch (config.getMarketType()) {
+            case CRYPTO -> {
+                final ArrayList<CryptoTrade> cryptoTrades = AlpacaStrategyRunnerUtil.getCryptoTrades(backtestStartAndEndTimes[0], backtestStartAndEndTimes[1], config.getSymbol());
+                AlpacaStrategyRunnerUtil.preloadCryptoTradeSeries(barSeries, cryptoTrades);
+            }
+            case STOCK -> AlpacaStrategyRunnerUtil.preloadStockTradeSeries(barSeries, backtestStartAndEndTimes[0], backtestStartAndEndTimes[1], config.getSymbol());
+        }
 
         ThreadPoolExecutor executorService = (ThreadPoolExecutor) Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2);
         List<Callable<Num>> tasks = new ArrayList<>();
@@ -60,9 +65,9 @@ public class AlpacaDynamicStrategyRunner {
     }
 
     private void getSMATasks(BaseBarSeries barSeries, List<Callable<Num>> tasks) {
-        for (int i = 1; i < 20; i++) {
+        for (int i = 1; i < 200; i++) {
             int shortSMA = i;
-            for (int j = 1; j < 20; j++) {
+            for (int j = 1; j < 200; j++) {
                 int longSMA = j;
                 tasks.add(() -> {
                     Strategy currentStrategy = SMAStrategy.buildStrategy(barSeries, shortSMA, longSMA);

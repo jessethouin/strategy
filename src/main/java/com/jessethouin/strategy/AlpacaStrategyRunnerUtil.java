@@ -12,9 +12,12 @@ import net.jacobpeterson.alpaca.model.endpoint.marketdata.stock.historical.bar.e
 import net.jacobpeterson.alpaca.model.endpoint.marketdata.stock.historical.trade.StockTrade;
 import net.jacobpeterson.alpaca.model.endpoint.marketdata.stock.historical.trade.StockTradesResponse;
 import net.jacobpeterson.alpaca.model.endpoint.orders.enums.OrderSide;
+import net.jacobpeterson.alpaca.model.endpoint.orders.enums.OrderTimeInForce;
+import net.jacobpeterson.alpaca.model.endpoint.orders.enums.OrderType;
 import net.jacobpeterson.alpaca.rest.AlpacaClientException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.util.StringUtils;
 import org.ta4j.core.BarSeries;
 import org.ta4j.core.BaseBar;
 import org.ta4j.core.num.DecimalNum;
@@ -132,25 +135,42 @@ public class AlpacaStrategyRunnerUtil {
                 DecimalNum.valueOf(cryptoBar.getVolume())));
     }
 
-    public static void exerciseAlpacaStrategy(MarketOperation marketOperation, DecimalNum close, DecimalNum cash, String symbol) {
+    public static void exerciseAlpacaStrategy(MarketOperation marketOperation, DecimalNum close, DecimalNum cash, String symbol, OrderTimeInForce orderTimeInForce) {
         switch (marketOperation) {
-            case ENTER -> alpacaBuy(symbol, StrategyRunnerUtil.get90PercentBuyBudget(close, cash));
+            case ENTER -> alpacaBuy(symbol, StrategyRunnerUtil.get90PercentBuyBudget(close, cash), orderTimeInForce);
             case EXIT -> alpacaSell(symbol);
         }
     }
 
-    public static void alpacaBuy(String symbol, DecimalNum budget) {
-        LOG.info("Alpaca BUY: {}", budget);
+    public static void alpacaBuy(String symbol, DecimalNum budget, OrderTimeInForce orderTimeInForce) {
+        LOG.info("Alpaca BUY: {} {}", symbol, budget);
         try {
-            ALPACA_ORDERS_API.requestFractionalMarketOrder(symbol, budget.getDelegate().setScale(4, RoundingMode.FLOOR).doubleValue(), OrderSide.BUY);
+            ALPACA_ORDERS_API.requestOrder(
+                    symbol,
+                    budget.getDelegate().setScale(4, RoundingMode.FLOOR).doubleValue(),
+                    null,
+                    OrderSide.BUY,
+                    OrderType.MARKET,
+                    orderTimeInForce,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null);
         } catch (AlpacaClientException e) {
             LOG.error("AlpacaClientException {}", e.getMessage());
         }
     }
 
     public static void alpacaSell(String symbol) {
+        LOG.info("Alpaca SELL: {}", symbol);
         try {
-            ALPACA_POSITIONS_API.close(symbol, null, 100.0);
+            ALPACA_POSITIONS_API.close(StringUtils.replace(symbol, "/", ""), null, 100.0);
         } catch (AlpacaClientException e) {
             LOG.error("AlpacaClientException {}", e.getMessage());
         }

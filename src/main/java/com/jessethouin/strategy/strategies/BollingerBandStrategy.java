@@ -21,7 +21,7 @@ import java.util.Collections;
 
 public class BollingerBandStrategy extends AbstractStrategy {
     public static Strategy buildStrategy(BarSeries series) {
-        return buildStrategy(series, 16);
+        return buildStrategy(series, 50);
     }
 
     public static Strategy buildStrategy(BarSeries series, int moving) {

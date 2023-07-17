@@ -3,6 +3,7 @@ package com.jessethouin.strategy.subscriptions;
 import com.jessethouin.strategy.AlpacaStrategyRunnerUtil;
 import com.jessethouin.strategy.conf.Config;
 import com.jessethouin.strategy.conf.MarketOperation;
+import net.jacobpeterson.alpaca.model.endpoint.orders.enums.OrderTimeInForce;
 import org.springframework.stereotype.Component;
 import org.ta4j.core.BarSeries;
 import org.ta4j.core.num.DecimalNum;
@@ -21,6 +22,13 @@ public class MarketOperationSubscription {
     }
 
     public void subscribe() {
-        alpacaMarketOperationFlux.subscribe(marketOperation -> AlpacaStrategyRunnerUtil.exerciseAlpacaStrategy(marketOperation, (DecimalNum) barSeries.getLastBar().getClosePrice(), config.getCash(), config.getSymbol()));
+        alpacaMarketOperationFlux.subscribe(marketOperation -> {
+            OrderTimeInForce orderTimeInForce = OrderTimeInForce.IMMEDIATE_OR_CANCEL;
+            switch (config.getMarketType()) {
+                case STOCK -> orderTimeInForce = OrderTimeInForce.DAY;
+                case CRYPTO -> orderTimeInForce = OrderTimeInForce.GOOD_UNTIL_CANCELLED;
+            }
+            AlpacaStrategyRunnerUtil.exerciseAlpacaStrategy(marketOperation, (DecimalNum) barSeries.getLastBar().getClosePrice(), config.getCash(), config.getSymbol(), orderTimeInForce);
+        });
     }
 }
