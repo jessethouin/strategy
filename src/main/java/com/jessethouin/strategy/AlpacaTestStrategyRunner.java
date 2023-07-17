@@ -6,8 +6,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Component;
 import org.ta4j.core.*;
-import org.ta4j.core.cost.LinearTransactionCostModel;
-import org.ta4j.core.cost.ZeroCostModel;
+import org.ta4j.core.analysis.cost.LinearTransactionCostModel;
+import org.ta4j.core.analysis.cost.ZeroCostModel;
 import org.ta4j.core.num.DecimalNum;
 
 import java.time.ZonedDateTime;

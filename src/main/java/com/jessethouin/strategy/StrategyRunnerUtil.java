@@ -10,10 +10,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.ta4j.core.*;
-import org.ta4j.core.analysis.criteria.ReturnOverMaxDrawdownCriterion;
-import org.ta4j.core.analysis.criteria.VersusBuyAndHoldCriterion;
-import org.ta4j.core.analysis.criteria.WinningPositionsRatioCriterion;
-import org.ta4j.core.analysis.criteria.pnl.GrossReturnCriterion;
+import org.ta4j.core.criteria.ReturnOverMaxDrawdownCriterion;
+import org.ta4j.core.criteria.VersusBuyAndHoldCriterion;
+import org.ta4j.core.criteria.WinningPositionsRatioCriterion;
+import org.ta4j.core.criteria.pnl.GrossReturnCriterion;
 import org.ta4j.core.num.DecimalNum;
 import org.ta4j.core.num.Num;
 
